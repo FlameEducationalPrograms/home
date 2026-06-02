@@ -3,19 +3,164 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FLAME Dashboard</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Flame Mission Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
   </head>
   <body>
-    <main class="hero" style="min-height: 100svh">
-      <div class="hero-content">
-        <p class="eyebrow">FLAME Function</p>
-        <h1>Dashboard Page</h1>
-        <p class="hero-text">Connect this button to your live dashboard link when it is ready.</p>
-        <div class="hero-actions">
-          <a class="button secondary" href="index.html">Back to Landing Page</a>
+    <div class="app-shell">
+      <header class="dashboard-header">
+        <a class="brand" href="index.html" aria-label="Back to landing page">
+          <img src="flame-logo.png" alt="FLAME Function logo" />
+        </a>
+        <div class="header-copy">
+          <p class="eyebrow">St. Paul Coptic Service</p>
+          <h1>Flame Mission Control</h1>
+          <p>Live overview of schools, people, activities, formation, follow-up, buildings, projects, and news.</p>
         </div>
-      </div>
-    </main>
+        <div class="header-actions">
+          <span id="lastUpdated">Loading...</span>
+          <button id="refreshData" type="button">Refresh Data</button>
+          <button id="printDashboard" type="button">Print</button>
+        </div>
+      </header>
+
+      <section class="filters-panel" aria-labelledby="filters-title">
+        <div>
+          <p class="eyebrow">Global Filters</p>
+          <h2 id="filters-title">Focus the command view</h2>
+        </div>
+        <div class="filters-grid">
+          <label>Country<select id="filterCountry"></select></label>
+          <label>School<select id="filterSchool"></select></label>
+          <label>Module<select id="filterModule"></select></label>
+          <label>Status<select id="filterStatus"></select></label>
+          <label>Priority<select id="filterPriority"></select></label>
+          <label>Search<input id="globalSearch" type="search" placeholder="Search records" /></label>
+        </div>
+      </section>
+
+      <div class="status-banner is-visible" id="loadStatus" role="status">Loading published Flame data...</div>
+
+      <section aria-labelledby="kpi-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Executive Command Center</p>
+            <h2 id="kpi-title">Live service indicators</h2>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpiGrid"></div>
+      </section>
+
+      <section class="action-panel" aria-labelledby="alerts-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Action Required</p>
+            <h2 id="alerts-title">Critical items that need admin attention.</h2>
+          </div>
+          <span class="count-pill" id="alertCount">0 alerts</span>
+        </div>
+        <div class="alert-list" id="alertList"></div>
+      </section>
+
+      <section aria-labelledby="charts-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Main Charts</p>
+            <h2 id="charts-title">Service movement at a glance</h2>
+          </div>
+        </div>
+        <div class="chart-grid" id="chartGrid"></div>
+      </section>
+
+      <section class="data-section" aria-labelledby="school-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">School Health</p>
+            <h2 id="school-title">Schools Health Ranking</h2>
+          </div>
+        </div>
+        <div id="schoolHealthTable"></div>
+      </section>
+
+      <section class="split-sections">
+        <article class="data-section" aria-labelledby="country-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Country Overview</p>
+              <h2 id="country-title">Countries ranked by health</h2>
+            </div>
+          </div>
+          <div id="countryOverview"></div>
+        </article>
+        <article class="data-section" aria-labelledby="people-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">People Monitor</p>
+              <h2 id="people-title">People coverage</h2>
+            </div>
+          </div>
+          <div id="peopleMonitor"></div>
+        </article>
+      </section>
+
+      <section class="data-section" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Activities</p>
+            <h2 id="activity-title">Activities & Tasks Monitor</h2>
+          </div>
+        </div>
+        <div id="activityMonitor"></div>
+      </section>
+
+      <section class="split-sections">
+        <article class="data-section" aria-labelledby="formation-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Formation</p>
+              <h2 id="formation-title">Formation Progress</h2>
+            </div>
+          </div>
+          <div id="formationDashboard"></div>
+        </article>
+        <article class="data-section" aria-labelledby="projects-title">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Projects</p>
+              <h2 id="projects-title">Projects & Buildings</h2>
+            </div>
+          </div>
+          <div id="projectsDashboard"></div>
+        </article>
+      </section>
+
+      <section class="data-section" aria-labelledby="news-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">News & Media</p>
+            <h2 id="news-title">Latest published service updates</h2>
+          </div>
+        </div>
+        <div id="newsDashboard"></div>
+      </section>
+
+      <section class="data-section" aria-labelledby="quality-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Data Quality</p>
+            <h2 id="quality-title">Data Quality & Completeness</h2>
+          </div>
+        </div>
+        <div id="qualityDashboard"></div>
+      </section>
+    </div>
+
+    <script src="dashboard.js"></script>
   </body>
 </html>
