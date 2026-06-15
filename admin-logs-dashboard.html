@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FLAME Admin Logs Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin-logs-dashboard.css" />
+  </head>
+  <body>
+    <div class="dashboard-shell">
+      <header class="hero-card print-keep">
+        <a class="brand" href="index.html" aria-label="Back to FLAME home">
+          <img src="flame-logo.png" alt="FLAME Function logo" />
+        </a>
+        <div class="hero-copy">
+          <p class="eyebrow">Admin Live Watch</p>
+          <h1>Logs Mission Control</h1>
+          <p>Simple live visual monitoring for the daily logs: who recorded, what was done, and what still needs follow-up.</p>
+        </div>
+        <div class="hero-actions no-print">
+          <span id="loadState" class="status-pill">Loading...</span>
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="printBtn" type="button" class="primary">Print Dashboard</button>
+        </div>
+      </header>
+
+      <section class="filters-card no-print" aria-labelledby="filtersTitle">
+        <div>
+          <p class="eyebrow">Global Filters</p>
+          <h2 id="filtersTitle">Focus the live logs</h2>
+        </div>
+        <div class="filters-grid">
+          <label>Period<select id="periodFilter"></select></label>
+          <label>From<input id="fromDate" type="date" /></label>
+          <label>To<input id="toDate" type="date" /></label>
+          <label>Country<select id="countryFilter"></select></label>
+          <label>School<select id="schoolFilter"></select></label>
+          <label>Module<select id="moduleFilter"></select></label>
+          <label>Status<select id="statusFilter"></select></label>
+          <label>Responsible<select id="responsibleFilter"></select></label>
+          <label class="search-label">Search<input id="searchFilter" type="search" placeholder="Task, class, notes, responsible..." /></label>
+        </div>
+      </section>
+
+      <section class="kpi-grid print-keep" id="kpiGrid" aria-label="Key indicators"></section>
+
+      <section class="focus-grid">
+        <article class="panel-card print-keep">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Today</p>
+              <h2>Today live watch</h2>
+            </div>
+            <span class="count-pill" id="todayCount">0 records</span>
+          </div>
+          <div id="todayWatch"></div>
+        </article>
+
+        <article class="panel-card print-keep">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Attention</p>
+              <h2>Not done / needs follow-up</h2>
+            </div>
+            <span class="count-pill danger" id="attentionCount">0 items</span>
+          </div>
+          <div id="attentionList"></div>
+        </article>
+      </section>
+
+      <section class="charts-grid print-keep" id="chartsGrid" aria-label="Visual charts"></section>
+
+      <section class="panel-card print-keep">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">School Matrix</p>
+            <h2>School × module performance</h2>
+          </div>
+        </div>
+        <div id="schoolMatrix"></div>
+      </section>
+
+      <section class="panel-card print-keep">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Live Records</p>
+            <h2>Latest filtered log entries</h2>
+          </div>
+          <button id="exportBtn" type="button" class="no-print">Export CSV</button>
+        </div>
+        <div id="logsTable"></div>
+      </section>
+    </div>
+
+    <script src="admin-logs-dashboard.js"></script>
+  </body>
+</html>
