@@ -18,7 +18,7 @@ const MODULES = [
 const state = {
   logs: [],
   filtered: [],
-  filters: { period: "30", module: "All", school: "All", status: "All", detailsSearch: "" },
+  filters: { period: "30", module: "All", school: "All", status: "All" },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -135,70 +135,49 @@ async function loadSheet(sheet) {
   return rowsFromCsv(await response.text()).map((row, index) => normalizeLog(row, sheet, index));
 }
 
-
-const METADATA_FIELDS = [
-  "id", "key", "unique id", "date", "log date", "created date", "activity date", "timestamp", "time stamp",
-  "country", "country name", "school", "school name", "assigned school", "class", "grade", "grade class",
-  "module", "log", "log type", "activity type", "task", "activity", "description", "title", "values", "value",
-  "notes", "note", "comment", "comments", "done", "completed", "status", "is done", "checked", "answer", "result",
-  "responsible", "responsible person", "created by", "resident", "resident name", "principal", "principal name", "priest", "priest name", "teacher", "teacher name"
-];
-
-function boolFromValue(value) {
-  const v = key(value);
-  if (["yes", "true", "done", "completed", "complete", "1", "y", "present", "checked", "ok", "تم", "نعم"].includes(v)) return true;
-  if (["no", "false", "pending", "not done", "0", "n", "absent", "unchecked", "لم يتم", "لا"].includes(v)) return false;
-  return null;
-}
-
-function labelize(name) {
-  return clean(name)
-    .replace(/[_-]+/g, " ")
-    .replace(/\w/g, (char) => char.toUpperCase());
-}
-
-function extractDetails(row, title, rowDone) {
-  const details = [];
-  Object.entries(row).forEach(([column, value]) => {
-    const colKey = key(column);
-    const val = clean(value);
-    if (!val || METADATA_FIELDS.includes(colKey)) return;
-    const bool = boolFromValue(val);
-    if (bool === null) {
-      if (val.length <= 80) details.push({ label: `${labelize(column)}: ${val}`, done: rowDone, source: "text" });
-      return;
-    }
-    details.push({ label: labelize(column), done: bool, source: "column" });
-  });
-  if (!details.length && title) details.push({ label: title, done: rowDone, source: "row" });
-  return details;
-}
-
 function normalizeLog(row, sheet, index) {
   const fallbackModule = moduleFromSheet(sheet.name);
   const date = parseDate(get(row, ["Date", "Log Date", "Created Date", "Activity Date", "Timestamp", "Time Stamp"]));
   const school = get(row, ["School", "School Name", "Assigned School"]);
   const country = get(row, ["Country", "Country Name"]);
   const title = get(row, ["Task", "Activity", "Description", "Title", "Values", "Value", "Notes"], fallbackModule);
+  const enteredBy = get(row, [
+    "Entered By",
+    "Created By",
+    "Submitted By",
+    "Added By",
+    "Logged By",
+    "Recorded By",
+    "User",
+    "User Name",
+    "Username",
+    "User Email",
+    "UserEmail",
+    "Email",
+    "Responsible",
+    "Responsible Person",
+    "Resident",
+    "Resident Name",
+    "Priest",
+    "Priest Name",
+    "Principal",
+    "Principal Name",
+    "Teacher",
+    "Teacher Name"
+  ]);
   const doneRaw = get(row, ["Done", "Completed", "Status", "Is Done", "Checked", "Answer", "Result"]);
   const done = parseDone(doneRaw);
   const module = get(row, ["Module", "Log", "Log Type", "Activity Type"], fallbackModule) || fallbackModule;
-  const details = extractDetails(row, title, done);
-  const completedDetails = details.filter((detail) => detail.done).length;
-  const missingDetails = details.filter((detail) => !detail.done).length;
   return {
     id: `${key(sheet.name)}-${index + 1}`,
     module,
     school: school || "School not specified",
     country,
     title,
+    enteredBy: enteredBy || "Unknown",
     date,
     done,
     doneRaw,
-    details,
-    completedDetails,
-    missingDetails,
-    row,
   };
 }
 
@@ -311,65 +290,59 @@ function renderRecent() {
     <span class="feed-dot"></span>
     <div>
       <strong>${escapeHtml(item.module)}</strong> ${badge(item.done ? "Completed" : "Pending")}
-      <p>${escapeHtml(item.school)} · ${formatDate(item.date)} · ${item.completedDetails || 0} done / ${item.missingDetails || 0} missing</p>
+      <p>${escapeHtml(item.school)} · ${formatDate(item.date)}</p>
     </div>
   </article>`).join("") : emptyState("No recent movement yet");
 }
 
 
-function detailChip(detail) {
-  return `<span class="detail-chip ${detail.done ? "done" : "missing"}">${detail.done ? "✓" : "×"} ${escapeHtml(detail.label)}</span>`;
-}
-
-function summarizeDetails(items) {
-  const all = items.flatMap((item) => item.details || []);
-  const completed = all.filter((detail) => detail.done);
-  const missing = all.filter((detail) => !detail.done);
-  return { all, completed, missing };
-}
-
-function renderDetailsExplorer() {
-  const q = key(state.filters.detailsSearch);
-  const logs = q
-    ? state.filtered.filter((log) => key([log.module, log.school, log.title, ...(log.details || []).map((d) => d.label)].join(" ")).includes(q))
-    : state.filtered;
-  const byModule = groupedBy(logs, "module");
-  const sections = Object.entries(byModule).sort((a, b) => b[1].length - a[1].length).map(([module, moduleLogs]) => {
-    const schoolRows = Object.entries(groupedBy(moduleLogs, "school"))
-      .map(([school, items]) => {
-        const summary = summarizeDetails(items);
-        const latest = items.map((item) => item.date).filter(Boolean).sort((a, b) => b - a)[0] || null;
-        const completedPreview = summary.completed.slice(0, 8);
-        const missingPreview = summary.missing.slice(0, 8);
-        return `<details class="school-detail" ${summary.missing.length ? "open" : ""}>
-          <summary>
-            <span><strong>${escapeHtml(school)}</strong><small>${items.length} log records · Latest ${formatDate(latest)}</small></span>
-            <span class="summary-badges">${badge(`${summary.completed.length} done`)} ${badge(`${summary.missing.length} not done`)}</span>
-          </summary>
-          <div class="detail-columns">
-            <div class="detail-column done-column">
-              <h4>What happened</h4>
-              <div class="chip-list">${completedPreview.length ? completedPreview.map(detailChip).join("") : `<span class="muted-line">No completed details in this view.</span>`}</div>
-            </div>
-            <div class="detail-column missing-column">
-              <h4>What did not happen</h4>
-              <div class="chip-list">${missingPreview.length ? missingPreview.map(detailChip).join("") : `<span class="muted-line">No missing items in this view.</span>`}</div>
-            </div>
-          </div>
-          ${summary.all.length > 16 ? `<p class="detail-footnote">Showing the first key details only. Use the filters or search to focus the view.</p>` : ""}
-        </details>`;
-      })
-      .join("");
-    const summary = summarizeDetails(moduleLogs);
-    return `<article class="module-detail-block">
-      <div class="module-detail-head">
-        <span class="module-icon">${moduleIcon(module)}</span>
-        <div><h3>${escapeHtml(module)}</h3><p>${moduleLogs.length} records · ${summary.completed.length} done details · ${summary.missing.length} not done details</p></div>
-      </div>
-      <div class="school-detail-list">${schoolRows}</div>
-    </article>`;
+function renderDetails() {
+  const logs = [...state.filtered].sort((a, b) => {
+    const moduleCompare = clean(a.module).localeCompare(clean(b.module));
+    if (moduleCompare) return moduleCompare;
+    const schoolCompare = clean(a.school).localeCompare(clean(b.school));
+    if (schoolCompare) return schoolCompare;
+    return (b.date || 0) - (a.date || 0);
   });
-  $("detailsExplorer").innerHTML = sections.length ? sections.join("") : emptyState("No details match this view", "Try changing the period, log type, school, status, or details search.");
+
+  if (!logs.length) {
+    $("detailsWrap").innerHTML = emptyState("No detailed records yet", "The details will appear when logs match the selected filters.");
+    return;
+  }
+
+  const byModule = groupedBy(logs, "module");
+  $("detailsWrap").innerHTML = Object.entries(byModule).map(([moduleName, moduleItems]) => {
+    const bySchool = groupedBy(moduleItems, "school");
+    const completed = moduleItems.filter((item) => item.done).length;
+    return `<article class="details-module">
+      <div class="details-module-head">
+        <div><span class="module-icon small">${moduleIcon(moduleName)}</span><strong>${escapeHtml(moduleName)}</strong></div>
+        <span>${completed}/${moduleItems.length} completed</span>
+      </div>
+      <div class="details-school-list">
+        ${Object.entries(bySchool).map(([schoolName, schoolItems]) => {
+          const schoolCompleted = schoolItems.filter((item) => item.done).length;
+          return `<section class="details-school">
+            <div class="details-school-head">
+              <h3>${escapeHtml(schoolName)}</h3>
+              <span>${schoolCompleted}/${schoolItems.length}</span>
+            </div>
+            <div class="task-list">
+              ${schoolItems.map((item) => `
+                <div class="task-row ${item.done ? "is-done" : "is-pending"}">
+                  <span class="task-status-dot" aria-hidden="true"></span>
+                  <div class="task-main">
+                    <strong>${escapeHtml(item.title || item.module)} <span class="entered-by">(${escapeHtml(item.enteredBy || "Unknown")})</span></strong>
+                    <small>${formatDate(item.date)} · ${escapeHtml(item.doneRaw || (item.done ? "Completed" : "Pending"))}</small>
+                  </div>
+                  ${badge(item.done ? "Completed" : "Pending")}
+                </div>`).join("")}
+            </div>
+          </section>`;
+        }).join("")}
+      </div>
+    </article>`;
+  }).join("");
 }
 
 function renderMatrix() {
@@ -385,12 +358,7 @@ function renderMatrix() {
       const schoolLogs = state.filtered.filter((l) => l.school === school);
       const total = schoolLogs.length;
       const rate = percent(schoolLogs.filter((l) => l.done).length, total);
-      return `<tr><td><strong>${escapeHtml(school)}</strong></td>${modules.map((m) => {
-        const cellLogs = schoolLogs.filter((l) => l.module === m);
-        const done = cellLogs.reduce((sum, l) => sum + (l.completedDetails || 0), 0);
-        const missing = cellLogs.reduce((sum, l) => sum + (l.missingDetails || 0), 0);
-        return `<td><strong>${cellLogs.length}</strong><br><small>${done} done / ${missing} not done</small></td>`;
-      }).join("")}<td>${total}</td><td>${rate}%</td></tr>`;
+      return `<tr><td><strong>${escapeHtml(school)}</strong></td>${modules.map((m) => `<td>${schoolLogs.filter((l) => l.module === m).length}</td>`).join("")}<td>${total}</td><td>${rate}%</td></tr>`;
     }).join("")}</tbody>
   </table>`;
 }
@@ -401,7 +369,7 @@ function render() {
   renderModules();
   renderSchools();
   renderRecent();
-  renderDetailsExplorer();
+  renderDetails();
   renderMatrix();
 }
 
@@ -415,7 +383,6 @@ function bindEvents() {
   });
   $("filterSchool").addEventListener("change", (event) => { state.filters.school = event.target.value; render(); });
   $("filterStatus").addEventListener("change", (event) => { state.filters.status = event.target.value; render(); });
-  $("detailSearch").addEventListener("input", (event) => { state.filters.detailsSearch = event.target.value; render(); });
   $("refreshData").addEventListener("click", loadDashboard);
   $("printPage").addEventListener("click", () => window.print());
 }
