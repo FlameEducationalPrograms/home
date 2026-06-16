@@ -141,40 +141,21 @@ function normalizeLog(row, sheet, index) {
   const school = get(row, ["School", "School Name", "Assigned School"]);
   const country = get(row, ["Country", "Country Name"]);
   const title = get(row, ["Task", "Activity", "Description", "Title", "Values", "Value", "Notes"], fallbackModule);
-  const enteredBy = get(row, [
-    "Entered By",
-    "Created By",
-    "Submitted By",
-    "Added By",
-    "Logged By",
-    "Recorded By",
-    "User",
-    "User Name",
-    "Username",
-    "User Email",
-    "UserEmail",
-    "Email",
-    "Responsible",
-    "Responsible Person",
-    "Resident",
-    "Resident Name",
-    "Priest",
-    "Priest Name",
-    "Principal",
-    "Principal Name",
-    "Teacher",
-    "Teacher Name"
-  ]);
   const doneRaw = get(row, ["Done", "Completed", "Status", "Is Done", "Checked", "Answer", "Result"]);
   const done = parseDone(doneRaw);
   const module = get(row, ["Module", "Log", "Log Type", "Activity Type"], fallbackModule) || fallbackModule;
+  const enteredBy = get(row, [
+    "Entered By", "Created By", "Submitted By", "Submitter", "User", "User Name", "User Email", "Email",
+    "Responsible", "Responsible Person", "Resident", "Resident Name", "Principal", "Principal Name",
+    "Teacher", "Teacher Name", "Priest", "Priest Name"
+  ], "Not specified");
   return {
     id: `${key(sheet.name)}-${index + 1}`,
     module,
     school: school || "School not specified",
     country,
     title,
-    enteredBy: enteredBy || "Unknown",
+    enteredBy,
     date,
     done,
     doneRaw,
@@ -296,53 +277,65 @@ function renderRecent() {
 }
 
 
+function taskLine(item) {
+  const who = item.enteredBy || "Not specified";
+  return `<li class="task-line ${item.done ? "done" : "pending"}">
+    <span class="task-status">${item.done ? "✓" : "×"}</span>
+    <span class="task-text"><strong>${escapeHtml(item.title || item.module)}</strong> <em>(${escapeHtml(who)})</em></span>
+    <small>${escapeHtml(item.module)} · ${formatDate(item.date)}</small>
+  </li>`;
+}
+
 function renderDetails() {
-  const logs = [...state.filtered].sort((a, b) => {
-    const moduleCompare = clean(a.module).localeCompare(clean(b.module));
-    if (moduleCompare) return moduleCompare;
-    const schoolCompare = clean(a.school).localeCompare(clean(b.school));
-    if (schoolCompare) return schoolCompare;
-    return (b.date || 0) - (a.date || 0);
-  });
+  const grouped = groupedBy(state.filtered, "school");
+  const schools = Object.entries(grouped)
+    .map(([school, items]) => {
+      const completed = items.filter((i) => i.done).length;
+      const pending = items.length - completed;
+      const latest = items.map((i) => i.date).filter(Boolean).sort((a, b) => b - a)[0] || null;
+      return { school, items, completed, pending, latest, rate: percent(completed, items.length) };
+    })
+    .sort((a, b) => b.items.length - a.items.length || a.school.localeCompare(b.school));
 
-  if (!logs.length) {
-    $("detailsWrap").innerHTML = emptyState("No detailed records yet", "The details will appear when logs match the selected filters.");
-    return;
-  }
+  if (!$('detailsExplorer')) return;
 
-  const byModule = groupedBy(logs, "module");
-  $("detailsWrap").innerHTML = Object.entries(byModule).map(([moduleName, moduleItems]) => {
-    const bySchool = groupedBy(moduleItems, "school");
-    const completed = moduleItems.filter((item) => item.done).length;
-    return `<article class="details-module">
-      <div class="details-module-head">
-        <div><span class="module-icon small">${moduleIcon(moduleName)}</span><strong>${escapeHtml(moduleName)}</strong></div>
-        <span>${completed}/${moduleItems.length} completed</span>
-      </div>
-      <div class="details-school-list">
-        ${Object.entries(bySchool).map(([schoolName, schoolItems]) => {
-          const schoolCompleted = schoolItems.filter((item) => item.done).length;
-          return `<section class="details-school">
-            <div class="details-school-head">
-              <h3>${escapeHtml(schoolName)}</h3>
-              <span>${schoolCompleted}/${schoolItems.length}</span>
+  $('detailsExplorer').innerHTML = schools.length ? schools.map((schoolRow, index) => {
+    const modules = Object.entries(groupedBy(schoolRow.items, "module"))
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    return `<details class="school-detail" ${index === 0 ? "open" : ""}>
+      <summary>
+        <span class="plus-icon" aria-hidden="true"></span>
+        <span class="summary-main">
+          <strong>${escapeHtml(schoolRow.school)}</strong>
+          <small>${schoolRow.items.length} records · ${schoolRow.completed} happened · ${schoolRow.pending} did not happen · latest ${formatDate(schoolRow.latest)}</small>
+        </span>
+        <span class="summary-rate">${schoolRow.rate}%</span>
+      </summary>
+      <div class="school-detail-body">
+        ${modules.map(([moduleName, items]) => {
+          const completedItems = items.filter((i) => i.done);
+          const pendingItems = items.filter((i) => !i.done);
+          return `<section class="module-detail-block">
+            <div class="module-detail-title">
+              <span>${moduleIcon(moduleName)}</span>
+              <h3>${escapeHtml(moduleName)}</h3>
+              <small>${items.length} records</small>
             </div>
-            <div class="task-list">
-              ${schoolItems.map((item) => `
-                <div class="task-row ${item.done ? "is-done" : "is-pending"}">
-                  <span class="task-status-dot" aria-hidden="true"></span>
-                  <div class="task-main">
-                    <strong>${escapeHtml(item.title || item.module)} <span class="entered-by">(${escapeHtml(item.enteredBy || "Unknown")})</span></strong>
-                    <small>${formatDate(item.date)} · ${escapeHtml(item.doneRaw || (item.done ? "Completed" : "Pending"))}</small>
-                  </div>
-                  ${badge(item.done ? "Completed" : "Pending")}
-                </div>`).join("")}
+            <div class="happened-grid">
+              <div class="happened-column">
+                <h4>What happened</h4>
+                <ul>${completedItems.length ? completedItems.map(taskLine).join("") : `<li class="muted-line">No completed records in this view.</li>`}</ul>
+              </div>
+              <div class="happened-column">
+                <h4>What did not happen</h4>
+                <ul>${pendingItems.length ? pendingItems.map(taskLine).join("") : `<li class="muted-line">No pending records in this view.</li>`}</ul>
+              </div>
             </div>
           </section>`;
         }).join("")}
       </div>
-    </article>`;
-  }).join("");
+    </details>`;
+  }).join("") : emptyState("No detailed story yet", "Change the filters or refresh the published logs.");
 }
 
 function renderMatrix() {
@@ -366,10 +359,10 @@ function renderMatrix() {
 function render() {
   applyFilters();
   renderKpis();
+  renderDetails();
   renderModules();
   renderSchools();
   renderRecent();
-  renderDetails();
   renderMatrix();
 }
 
