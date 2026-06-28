@@ -379,26 +379,31 @@ function renderDetails() {
         <span class="summary-rate">${schoolRow.rate}%</span>
       </summary>
       <div class="school-detail-body">
-        ${modules.map(([moduleName, items]) => {
+        ${modules.map(([moduleName, items], moduleIndex) => {
           const completedItems = items.filter((i) => i.done);
           const pendingItems = items.filter((i) => !i.done);
-          return `<section class="module-detail-block">
-            <div class="module-detail-title">
-              <span>${moduleIcon(moduleName)}</span>
-              <h3>${escapeHtml(moduleName)}</h3>
-              <small>${uniqueVisitCount(items)} visits · ${items.length} task records</small>
-            </div>
-            <div class="happened-grid">
-              <div class="happened-column">
-                <h4>What happened</h4>
-                <ul>${completedItems.length ? completedItems.map(taskLine).join("") : `<li class="muted-line">No completed records in this view.</li>`}</ul>
+          return `<details class="module-detail-block" ${index === 0 && moduleIndex === 0 ? "open" : ""}>
+            <summary class="module-detail-summary">
+              <span class="plus-icon module-plus-icon" aria-hidden="true"></span>
+              <span class="module-icon-small">${moduleIcon(moduleName)}</span>
+              <span class="module-summary-main">
+                <strong>${escapeHtml(moduleName)}</strong>
+                <small>${uniqueVisitCount(items)} visits · ${items.length} task records</small>
+              </span>
+            </summary>
+            <div class="module-detail-content">
+              <div class="happened-grid">
+                <div class="happened-column">
+                  <h4>What happened</h4>
+                  <ul>${completedItems.length ? completedItems.map(taskLine).join("") : `<li class="muted-line">No completed records in this view.</li>`}</ul>
+                </div>
+                <div class="happened-column">
+                  <h4>What did not happen</h4>
+                  <ul>${pendingItems.length ? pendingItems.map(taskLine).join("") : `<li class="muted-line">No pending records in this view.</li>`}</ul>
+                </div>
               </div>
-              <div class="happened-column">
-                <h4>What did not happen</h4>
-                <ul>${pendingItems.length ? pendingItems.map(taskLine).join("") : `<li class="muted-line">No pending records in this view.</li>`}</ul>
-              </div>
             </div>
-          </section>`;
+          </details>`;
         }).join("")}
       </div>
     </details>`;

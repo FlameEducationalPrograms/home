@@ -540,8 +540,63 @@ th { color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-trans
 .module-detail-block {
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 14px;
   background: #fffaf4;
+  overflow: hidden;
+}
+
+.module-detail-block summary {
+  list-style: none;
+}
+
+.module-detail-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.module-detail-summary {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.module-plus-icon {
+  width: 28px;
+  box-shadow: 0 8px 18px rgba(167, 25, 20, 0.12);
+}
+
+.module-detail-block[open] .module-plus-icon::before {
+  content: "−";
+}
+
+.module-icon-small {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  color: var(--flame-deep);
+  background: #fff2ec;
+  font-weight: 900;
+}
+
+.module-summary-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.module-summary-main small {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.module-detail-content {
+  padding: 0 14px 14px 52px;
 }
 
 .module-detail-title {
@@ -651,6 +706,25 @@ th { color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-trans
     padding-left: 14px;
   }
 
+  .module-detail-summary {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .module-summary-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .module-summary-main small {
+    margin-left: 0;
+    white-space: normal;
+  }
+
+  .module-detail-content {
+    padding-left: 14px;
+  }
+
   .happened-grid {
     grid-template-columns: 1fr;
   }
@@ -661,7 +735,8 @@ th { color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-trans
     break-inside: avoid;
   }
 
-  .school-detail:not([open]) .school-detail-body {
+  .school-detail:not([open]) .school-detail-body,
+  .module-detail-block:not([open]) .module-detail-content {
     display: block;
   }
 }
