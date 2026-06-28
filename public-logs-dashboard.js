@@ -85,6 +85,17 @@ function formatDate(date) {
   return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "No date";
 }
 
+function logDateRange(items) {
+  const dates = items.map((item) => item.date).filter(Boolean).sort((a, b) => a - b);
+  return { from: dates[0] || null, to: dates[dates.length - 1] || null };
+}
+
+function renderStoryRange() {
+  const range = logDateRange(state.logs);
+  if ($("storyFrom")) $("storyFrom").textContent = formatDate(range.from);
+  if ($("storyTo")) $("storyTo").textContent = formatDate(range.to);
+}
+
 function parseDone(value) {
   const v = key(value);
   if (["yes", "true", "done", "completed", "complete", "1", "y", "present", "checked"].includes(v)) return true;
@@ -276,12 +287,9 @@ function renderKpis() {
   const logs = state.filtered;
   const totalVisits = uniqueVisitCount(logs);
   const completedVisits = completedVisitCount(logs);
-  const today = startOfToday();
-  const todayVisits = uniqueVisitCount(logs.filter((l) => l.date && l.date >= today));
   $("kpiLogs").textContent = totalVisits.toLocaleString();
   $("kpiSchools").textContent = unique(logs.map((l) => l.school)).length.toLocaleString();
   $("kpiCompleted").textContent = `${percent(completedVisits, totalVisits)}%`;
-  $("kpiToday").textContent = todayVisits.toLocaleString();
 }
 
 function renderModules() {
@@ -434,7 +442,7 @@ function render() {
   renderDetails();
   renderModules();
   renderSchools();
-  renderRecent();
+  renderStoryRange();
   renderMatrix();
 }
 

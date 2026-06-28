@@ -23,9 +23,14 @@
             A simple visual window into actual school visits: prayer, values, medical care,
             formation, and pastoral follow-up moving together across the service.
           </p>
+          <div class="story-range" id="storyRange" aria-label="Story date range">
+            <span><strong>From</strong> <em id="storyFrom">Loading...</em></span>
+            <span><strong>To</strong> <em id="storyTo">Loading...</em></span>
+          </div>
           <div class="hero-actions">
             <button id="refreshData" type="button">Refresh Live Data</button>
             <button id="printPage" type="button">Print Story</button>
+            <a class="button-link" href="https://flameeducationalprograms.github.io/activities/" target="_blank" rel="noopener">Activities Page</a>
           </div>
         </section>
         <aside class="live-panel" aria-label="Live dashboard status">
@@ -76,11 +81,6 @@
           <strong>Completion Signal</strong>
           <small>Fully completed visits from this view</small>
         </article>
-        <article>
-          <span id="kpiToday">0</span>
-          <strong>Today’s Visits</strong>
-          <small>Unique visits created or dated today</small>
-        </article>
       </section>
 
 
@@ -99,20 +99,13 @@
       </section>
       <section class="module-grid" id="moduleGrid" aria-label="Visits by category"></section>
 
-      <section class="spotlight-grid">
+      <section class="school-spotlight">
         <article class="feature-card">
           <div class="section-heading compact">
             <p class="eyebrow">Schools</p>
             <h2>Progress by school</h2>
           </div>
           <div id="schoolGrid" class="school-grid"></div>
-        </article>
-        <article class="feature-card">
-          <div class="section-heading compact">
-            <p class="eyebrow">Momentum</p>
-            <h2>Latest public movement</h2>
-          </div>
-          <div id="recentFeed" class="recent-feed"></div>
         </article>
       </section>
 

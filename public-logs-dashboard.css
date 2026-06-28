@@ -145,6 +145,65 @@ h3 { font-size: 1.05rem; }
   margin-top: 20px;
 }
 
+.story-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.story-range span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.story-range strong {
+  color: var(--flame-deep);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.story-range em {
+  color: var(--ink);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+  background: #fff;
+}
+
+.button-link:hover {
+  border-color: var(--sky);
+  box-shadow: 0 10px 26px rgba(52, 169, 214, 0.16);
+}
+
+.school-spotlight {
+  margin-top: 16px;
+}
+
+.school-spotlight .school-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 button, select {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -229,7 +288,7 @@ select { width: 100%; padding: 0 14px; }
 
 .story-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin: 16px 0 28px;
 }
@@ -430,13 +489,13 @@ th { color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-trans
 @media (max-width: 1080px) {
   .hero-card, .filters-card, .spotlight-grid { grid-template-columns: 1fr; }
   .module-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .story-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .story-strip, .school-spotlight .school-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {
   .shell { width: min(100% - 18px, 1240px); padding-top: 10px; }
-  .module-grid, .story-strip, .filters-grid, .school-grid { grid-template-columns: 1fr; }
+  .module-grid, .story-strip, .filters-grid, .school-grid, .school-spotlight .school-grid { grid-template-columns: 1fr; }
   .hero-card, .filters-card, .feature-card { border-radius: 18px; }
   button { width: 100%; }
   .hero-actions { display: grid; }
