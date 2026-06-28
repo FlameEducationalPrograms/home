@@ -11,6 +11,7 @@ const MODULES = [
   { name: "Morning Assembly", icon: "☀", words: ["morning assembly", "assembly", "morning"] },
   { name: "Values Class", icon: "❤", words: ["values class", "value class", "values", "value"] },
   { name: "Principals Visit", icon: "👣", words: ["principals visit", "principal visit", "visits", "visit"] },
+  { name: "Medical Log", icon: "✚", words: ["medical log", "medical", "medical visit", "medical visits", "clinic", "doctor", "health"] },
   { name: "Follow Up", icon: "✚", words: ["follow up", "followup", "follow"] },
   { name: "Formation", icon: "✦", words: ["formation"] },
 ];
@@ -159,6 +160,8 @@ function normalizeLog(row, sheet, index) {
     date,
     done,
     doneRaw,
+    sourceKey: sheet.base || sheet.name,
+    sourceSheet: sheet.name,
   };
 }
 
@@ -194,6 +197,60 @@ function groupedBy(items, prop) {
   }, {});
 }
 
+
+function visitDateKey(date) {
+  if (!date) return "no-date";
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("-");
+}
+
+function makeVisitKey(log) {
+  return [
+    key(log.sourceKey || "unknown-source"),
+    key(log.module || "unknown-module"),
+    key(log.school || "unknown-school"),
+    key(log.enteredBy || "unknown-person"),
+    visitDateKey(log.date)
+  ].join("|");
+}
+
+function uniqueVisitKeys(items) {
+  return [...new Set(items.map(makeVisitKey))];
+}
+
+function uniqueVisitCount(items) {
+  return uniqueVisitKeys(items).length;
+}
+
+function visitGroups(items) {
+  return Object.values(items.reduce((acc, item) => {
+    const visitKey = makeVisitKey(item);
+    if (!acc[visitKey]) {
+      acc[visitKey] = {
+        visitKey,
+        module: item.module,
+        school: item.school,
+        enteredBy: item.enteredBy,
+        date: item.date,
+        items: [],
+      };
+    }
+    acc[visitKey].items.push(item);
+    return acc;
+  }, {}));
+}
+
+function completedVisitCount(items) {
+  return visitGroups(items).filter((visit) => visit.items.length && visit.items.every((item) => item.done)).length;
+}
+
+function taskCount(items) {
+  return items.length;
+}
+
 function badge(label) {
   const cls = key(label).includes("completed") || key(label).includes("strong") ? "good" : key(label).includes("pending") || key(label).includes("growing") ? "watch" : key(label).includes("quiet") ? "danger" : "info";
   return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
@@ -217,28 +274,31 @@ function updateFilterOptions() {
 
 function renderKpis() {
   const logs = state.filtered;
-  const completed = logs.filter((l) => l.done).length;
+  const totalVisits = uniqueVisitCount(logs);
+  const completedVisits = completedVisitCount(logs);
   const today = startOfToday();
-  $("kpiLogs").textContent = logs.length.toLocaleString();
+  const todayVisits = uniqueVisitCount(logs.filter((l) => l.date && l.date >= today));
+  $("kpiLogs").textContent = totalVisits.toLocaleString();
   $("kpiSchools").textContent = unique(logs.map((l) => l.school)).length.toLocaleString();
-  $("kpiCompleted").textContent = `${percent(completed, logs.length)}%`;
-  $("kpiToday").textContent = logs.filter((l) => l.date && l.date >= today).length.toLocaleString();
+  $("kpiCompleted").textContent = `${percent(completedVisits, totalVisits)}%`;
+  $("kpiToday").textContent = todayVisits.toLocaleString();
 }
 
 function renderModules() {
   const grouped = groupedBy(state.filtered, "module");
-  const modules = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
+  const modules = Object.entries(grouped).sort((a, b) => uniqueVisitCount(b[1]) - uniqueVisitCount(a[1]));
   $("moduleGrid").innerHTML = modules.length ? modules.map(([name, items]) => {
-    const completed = items.filter((i) => i.done).length;
-    const rate = percent(completed, items.length);
+    const visits = uniqueVisitCount(items);
+    const completed = completedVisitCount(items);
+    const rate = percent(completed, visits);
     const schools = unique(items.map((i) => i.school)).length;
     const signal = rate >= 80 ? "Strong Progress" : rate >= 50 ? "Growing Progress" : "Needs More Movement";
     return `<article class="module-card">
       <span class="module-icon">${moduleIcon(name)}</span>
       <h3>${escapeHtml(name)}</h3>
-      <div class="big-number">${items.length}</div>
+      <div class="big-number">${visits}</div>
       <div class="progress-track" aria-label="${rate}% completed"><div class="progress-fill" style="width:${rate}%"></div></div>
-      <p class="card-note">${badge(signal)}<br>${completed} completed confirmations across ${schools} schools.</p>
+      <p class="card-note">${badge(signal)}<br>${completed} completed visits across ${schools} schools.<br><small>${taskCount(items)} checked task records.</small></p>
     </article>`;
   }).join("") : emptyState("No log categories yet");
 }
@@ -246,16 +306,17 @@ function renderModules() {
 function renderSchools() {
   const grouped = groupedBy(state.filtered, "school");
   const rows = Object.entries(grouped).map(([school, items]) => {
-    const completed = items.filter((i) => i.done).length;
-    const rate = percent(completed, items.length);
-    return { school, items, completed, rate, modules: unique(items.map((i) => i.module)).length, latest: items.map((i) => i.date).filter(Boolean).sort((a,b) => b - a)[0] || null };
-  }).sort((a, b) => b.items.length - a.items.length).slice(0, 12);
+    const visits = uniqueVisitCount(items);
+    const completed = completedVisitCount(items);
+    const rate = percent(completed, visits);
+    return { school, items, visits, completed, rate, modules: unique(items.map((i) => i.module)).length, latest: items.map((i) => i.date).filter(Boolean).sort((a,b) => b - a)[0] || null };
+  }).sort((a, b) => b.visits - a.visits).slice(0, 12);
   $("schoolGrid").innerHTML = rows.length ? rows.map((r) => {
     const signal = r.rate >= 80 ? "Strong" : r.rate >= 50 ? "Growing" : "Quiet";
     return `<article class="school-card">
       <div class="school-card-top"><h3>${escapeHtml(r.school)}</h3>${badge(signal)}</div>
       <div class="school-meta">
-        <span><strong>${r.items.length}</strong><br>logs</span>
+        <span><strong>${r.visits}</strong><br>visits</span>
         <span><strong>${r.modules}</strong><br>types</span>
         <span><strong>${r.rate}%</strong><br>signal</span>
       </div>
@@ -266,14 +327,19 @@ function renderSchools() {
 }
 
 function renderRecent() {
-  const recent = [...state.filtered].sort((a, b) => (b.date || 0) - (a.date || 0)).slice(0, 14);
-  $("recentFeed").innerHTML = recent.length ? recent.map((item) => `<article class="feed-item">
-    <span class="feed-dot"></span>
-    <div>
-      <strong>${escapeHtml(item.module)}</strong> ${badge(item.done ? "Completed" : "Pending")}
-      <p>${escapeHtml(item.school)} · ${formatDate(item.date)}</p>
-    </div>
-  </article>`).join("") : emptyState("No recent movement yet");
+  const recent = visitGroups(state.filtered)
+    .sort((a, b) => (b.date || 0) - (a.date || 0))
+    .slice(0, 14);
+  $("recentFeed").innerHTML = recent.length ? recent.map((visit) => {
+    const completed = visit.items.every((item) => item.done);
+    return `<article class="feed-item">
+      <span class="feed-dot"></span>
+      <div>
+        <strong>${escapeHtml(visit.module)}</strong> ${badge(completed ? "Completed" : "Pending")}
+        <p>${escapeHtml(visit.school)} · ${formatDate(visit.date)} · ${escapeHtml(visit.enteredBy)} · ${visit.items.length} checked task records</p>
+      </div>
+    </article>`;
+  }).join("") : emptyState("No recent movement yet");
 }
 
 
@@ -290,12 +356,13 @@ function renderDetails() {
   const grouped = groupedBy(state.filtered, "school");
   const schools = Object.entries(grouped)
     .map(([school, items]) => {
-      const completed = items.filter((i) => i.done).length;
-      const pending = items.length - completed;
+      const visits = uniqueVisitCount(items);
+      const completed = completedVisitCount(items);
+      const pending = visits - completed;
       const latest = items.map((i) => i.date).filter(Boolean).sort((a, b) => b - a)[0] || null;
-      return { school, items, completed, pending, latest, rate: percent(completed, items.length) };
+      return { school, items, visits, completed, pending, latest, rate: percent(completed, visits) };
     })
-    .sort((a, b) => b.items.length - a.items.length || a.school.localeCompare(b.school));
+    .sort((a, b) => b.visits - a.visits || a.school.localeCompare(b.school));
 
   if (!$('detailsExplorer')) return;
 
@@ -307,7 +374,7 @@ function renderDetails() {
         <span class="plus-icon" aria-hidden="true"></span>
         <span class="summary-main">
           <strong>${escapeHtml(schoolRow.school)}</strong>
-          <small>${schoolRow.items.length} records · ${schoolRow.completed} happened · ${schoolRow.pending} did not happen · latest ${formatDate(schoolRow.latest)}</small>
+          <small>${schoolRow.visits} visits · ${schoolRow.items.length} checked task records · ${schoolRow.completed} completed visits · ${schoolRow.pending} pending visits · latest ${formatDate(schoolRow.latest)}</small>
         </span>
         <span class="summary-rate">${schoolRow.rate}%</span>
       </summary>
@@ -319,7 +386,7 @@ function renderDetails() {
             <div class="module-detail-title">
               <span>${moduleIcon(moduleName)}</span>
               <h3>${escapeHtml(moduleName)}</h3>
-              <small>${items.length} records</small>
+              <small>${uniqueVisitCount(items)} visits · ${items.length} task records</small>
             </div>
             <div class="happened-grid">
               <div class="happened-column">
@@ -349,9 +416,9 @@ function renderMatrix() {
     <thead><tr><th>School</th>${modules.map((m) => `<th>${escapeHtml(m)}</th>`).join("")}<th>Total</th><th>Completion</th></tr></thead>
     <tbody>${schools.map((school) => {
       const schoolLogs = state.filtered.filter((l) => l.school === school);
-      const total = schoolLogs.length;
-      const rate = percent(schoolLogs.filter((l) => l.done).length, total);
-      return `<tr><td><strong>${escapeHtml(school)}</strong></td>${modules.map((m) => `<td>${schoolLogs.filter((l) => l.module === m).length}</td>`).join("")}<td>${total}</td><td>${rate}%</td></tr>`;
+      const total = uniqueVisitCount(schoolLogs);
+      const rate = percent(completedVisitCount(schoolLogs), total);
+      return `<tr><td><strong>${escapeHtml(school)}</strong></td>${modules.map((m) => `<td>${uniqueVisitCount(schoolLogs.filter((l) => l.module === m))}</td>`).join("")}<td>${total}</td><td>${rate}%</td></tr>`;
     }).join("")}</tbody>
   </table>`;
 }
@@ -395,7 +462,7 @@ async function loadDashboard() {
     state.filters.status = $("filterStatus").value || "All";
     render();
     $("lastUpdated").textContent = `Last updated ${new Date().toLocaleString()}`;
-    status.textContent = state.logs.length ? `Loaded ${state.logs.length.toLocaleString()} public log records.` : "No log records were found in the published sheets.";
+    status.textContent = state.logs.length ? `Loaded ${uniqueVisitCount(state.logs).toLocaleString()} visits from ${state.logs.length.toLocaleString()} checked task records.` : "No log records were found in the published sheets.";
     setTimeout(() => status.classList.remove("is-visible"), 2600);
   } catch (error) {
     console.error(error);

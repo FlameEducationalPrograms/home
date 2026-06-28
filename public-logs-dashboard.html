@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FLAME Service Progress | Public Logs Dashboard</title>
+    <title>FLAME Service Visits | Public Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -18,10 +18,10 @@
         </a>
         <section class="hero-copy" aria-labelledby="page-title">
           <p class="eyebrow">Public Service Progress</p>
-          <h1 id="page-title">FLAME Logs Story</h1>
+          <h1 id="page-title">FLAME Visits Story</h1>
           <p>
-            A simple visual window into daily school follow-up: prayer, values, visits,
-            formation, and pastoral care moving together across the service.
+            A simple visual window into actual school visits: prayer, values, medical care,
+            formation, and pastoral follow-up moving together across the service.
           </p>
           <div class="hero-actions">
             <button id="refreshData" type="button">Refresh Live Data</button>
@@ -30,7 +30,7 @@
         </section>
         <aside class="live-panel" aria-label="Live dashboard status">
           <span class="live-dot"></span>
-          <strong>Live from published logs</strong>
+          <strong>Live from published visit logs</strong>
           <small id="lastUpdated">Loading...</small>
         </aside>
       </header>
@@ -58,13 +58,13 @@
         </div>
       </section>
 
-      <div class="status-banner is-visible" id="loadStatus" role="status">Loading published service logs...</div>
+      <div class="status-banner is-visible" id="loadStatus" role="status">Loading published visit logs...</div>
 
       <section class="story-strip" aria-label="Service progress summary">
         <article>
           <span id="kpiLogs">0</span>
-          <strong>Total Visible Logs</strong>
-          <small>Follow-up records loaded for this view</small>
+          <strong>Total Visits</strong>
+          <small>Unique visits calculated from responsible person, school, date, and log type</small>
         </article>
         <article>
           <span id="kpiSchools">0</span>
@@ -74,12 +74,12 @@
         <article>
           <span id="kpiCompleted">0%</span>
           <strong>Completion Signal</strong>
-          <small>Completed confirmations from visible logs</small>
+          <small>Fully completed visits from this view</small>
         </article>
         <article>
           <span id="kpiToday">0</span>
-          <strong>Today’s Movement</strong>
-          <small>Records created or dated today</small>
+          <strong>Today’s Visits</strong>
+          <small>Unique visits created or dated today</small>
         </article>
       </section>
 
@@ -88,7 +88,7 @@
         <div class="section-heading compact">
           <p class="eyebrow">Detailed Story</p>
           <h2 id="details-title">What happened &amp; what did not happen?</h2>
-          <p class="section-note">Grouped by school. Open any school using the plus button to see completed and pending tasks, including who entered each record.</p>
+          <p class="section-note">Grouped by school. Each visit is calculated from the responsible person, school, date, and log type. Open any school to see the task/question records behind each visit.</p>
         </div>
         <div id="detailsExplorer" class="details-explorer"></div>
       </section>
@@ -97,7 +97,7 @@
         <p class="eyebrow">Log Categories</p>
         <h2>What is moving in the service?</h2>
       </section>
-      <section class="module-grid" id="moduleGrid" aria-label="Logs by category"></section>
+      <section class="module-grid" id="moduleGrid" aria-label="Visits by category"></section>
 
       <section class="spotlight-grid">
         <article class="feature-card">
@@ -119,7 +119,7 @@
       <section class="feature-card printable-table-card">
         <div class="section-heading compact">
           <p class="eyebrow">Public Summary</p>
-          <h2>Schools × Logs matrix</h2>
+          <h2>Schools × Visits matrix</h2>
         </div>
         <div id="matrixWrap" class="table-wrap"></div>
       </section>
