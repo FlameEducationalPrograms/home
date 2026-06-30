@@ -13,6 +13,59 @@ const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 const key = (value) => clean(value).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim();
 const unique = (items) => [...new Set(items.map(clean).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
+/*
+  IMPORTANT FOR PDF FILES
+  The Google Sheet PDF File column usually stores AppSheet/Drive file paths such as:
+  curriculum_Files/deecf966.PDF File.222400.pdf
+
+  These are NOT public URLs by themselves. To make Open/Download work, either:
+  1) Upload the full curriculum_Files folder beside curriculum.html on GitHub Pages, or
+  2) Put real public https:// PDF URLs in the sheet, or
+  3) Set PDF_BASE_URL below to the public folder URL that contains curriculum_Files.
+
+  Example:
+  const PDF_BASE_URL = "https://flameeducationalprograms.github.io/home/";
+*/
+const PDF_BASE_URL = "";
+const DRIVE_FOLDER_ID = "1hr9OR4MvaK3hXzVQ1P4A3zRVTXRfOMTP";
+const DRIVE_FOLDER_URL = `https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}`;
+
+function isAbsoluteUrl(value) {
+  return /^https?:\/\//i.test(clean(value));
+}
+
+function fileNameFromPath(path) {
+  const raw = clean(path);
+  if (!raw) return "curriculum.pdf";
+  const name = raw.split(/[\\/]/).pop() || "curriculum.pdf";
+  return name.endsWith(".pdf") ? name : `${name}.pdf`;
+}
+
+function makeDriveFolderSearchUrl(path) {
+  const fileName = fileNameFromPath(path);
+  return `${DRIVE_FOLDER_URL}?q=${encodeURIComponent(fileName)}`;
+}
+
+function joinPdfBase(path) {
+  const raw = clean(path);
+  if (!raw) return "";
+  if (isAbsoluteUrl(raw)) return raw;
+
+  const encodedPath = raw
+    .replace(/^curriculum_Files\//i, "curriculum_Files_/")
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+
+  if (PDF_BASE_URL) {
+    return `${PDF_BASE_URL.replace(/\/$/, "")}/${encodedPath}`;
+  }
+
+  // Google Drive folder links do not expose a stable public file URL from the filename alone.
+  // For relative AppSheet paths, open the shared Drive folder filtered by the detected filename.
+  return makeDriveFolderSearchUrl(raw);
+}
+
 const introVideo = document.querySelector("#introVideo");
 const videoControl = document.querySelector("#videoControl");
 const soundControl = document.querySelector("#soundControl");
@@ -128,17 +181,39 @@ function normalizeRecord(row) {
 }
 
 function makePdfUrl(value) {
-  const raw = clean(value);
-  if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return raw.split("/").map((part, index) => index === 0 ? part : encodeURIComponent(part)).join("/");
+  return joinPdfBase(value);
 }
 
-function fileNameFromPath(path) {
-  const raw = clean(path);
-  if (!raw) return "curriculum.pdf";
-  const name = raw.split(/[\\/]/).pop() || "curriculum.pdf";
-  return name.endsWith(".pdf") ? name : `${name}.pdf`;
+function isRelativePdfPath(value) {
+  const raw = clean(value);
+  return Boolean(raw) && !isAbsoluteUrl(raw);
+}
+
+async function openPdfSafely(event, url, rawPath) {
+  event.preventDefault();
+
+  if (!url) return;
+
+  // Direct https:// PDF links open directly. Relative AppSheet paths open as a Drive folder search by filename.
+  window.open(url, "_blank", "noopener");
+}
+
+function downloadPdfSafely(event, url, rawPath, fileName) {
+  event.preventDefault();
+
+  if (!url) return;
+
+  if (isRelativePdfPath(rawPath)) {
+    window.open(url, "_blank", "noopener");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName || "curriculum.pdf";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function highlightDescription(text) {
@@ -194,9 +269,11 @@ function renderLibrary() {
         ${record.id ? `<span><strong>ID:</strong> ${escapeHtml(record.id)}</span>` : ""}
         ${record.pdfFile ? `<span><strong>PDF file:</strong> ${escapeHtml(record.pdfFile)}</span>` : ""}
       </div>
+      ${isRelativePdfPath(record.pdfFile) ? `<p class="file-warning">This record uses an AppSheet file path. Buttons will open the shared Google Drive folder searched by this filename: <strong>${escapeHtml(fileName)}</strong>.</p>` : ""}
       <div class="card-actions">
-        ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener">Open PDF</a>` : ""}
-        ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" download="${escapeHtml(fileName)}">Download PDF</a>` : ""}
+        ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-open-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}">${isRelativePdfPath(record.pdfFile) ? "Open in Drive" : "Open PDF"}</a>` : ""}
+        ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-download-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}" data-file-name="${escapeHtml(fileName)}">${isRelativePdfPath(record.pdfFile) ? "Download from Drive" : "Download PDF"}</a>` : ""}
+        ${hasPdf ? `<button type="button" class="copy-path" data-copy-path="${escapeHtml(fileName)}">Copy File Name</button>` : ""}
       </div>
     </article>`;
   }).join("") : emptyState("No curriculum files found", "Try another description search or clear the filters.");
@@ -225,6 +302,28 @@ function bindEvents() {
     render();
   });
   $("refreshData").addEventListener("click", loadCurriculum);
+
+  $("libraryGrid").addEventListener("click", (event) => {
+    const openLink = event.target.closest("[data-open-pdf]");
+    if (openLink) {
+      openPdfSafely(event, openLink.dataset.url, openLink.dataset.rawPath);
+      return;
+    }
+
+    const downloadLink = event.target.closest("[data-download-pdf]");
+    if (downloadLink) {
+      downloadPdfSafely(event, downloadLink.dataset.url, downloadLink.dataset.rawPath, downloadLink.dataset.fileName);
+      return;
+    }
+
+    const copyButton = event.target.closest("[data-copy-path]");
+    if (copyButton) {
+      navigator.clipboard.writeText(copyButton.dataset.copyPath || "").then(() => {
+        copyButton.textContent = "Copied";
+        setTimeout(() => { copyButton.textContent = "Copy File Name"; }, 1300);
+      }).catch(() => alert(copyButton.dataset.copyPath || "No path available"));
+    }
+  });
 }
 
 async function loadCurriculum() {

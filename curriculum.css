@@ -479,3 +479,31 @@ mark {
   .hero-video, .hero-overlay { display: none; }
   .library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.file-warning {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed rgba(199, 53, 53, 0.32);
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(199, 53, 53, 0.06);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.card-actions .copy-path {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+  background: #fff;
+  cursor: pointer;
+}
+
+.card-actions .copy-path:hover {
+  border-color: var(--sky);
+  box-shadow: 0 10px 24px rgba(52, 169, 214, 0.14);
+}
