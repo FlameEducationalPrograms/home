@@ -269,11 +269,8 @@ function renderLibrary() {
         ${record.id ? `<span><strong>ID:</strong> ${escapeHtml(record.id)}</span>` : ""}
         ${record.pdfFile ? `<span><strong>PDF file:</strong> ${escapeHtml(record.pdfFile)}</span>` : ""}
       </div>
-      ${isRelativePdfPath(record.pdfFile) ? ` : ""}
       <div class="card-actions">
         ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-open-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}">${isRelativePdfPath(record.pdfFile) ? "Open in Drive" : "Open PDF"}</a>` : ""}
-        ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-download-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}" data-file-name="${escapeHtml(fileName)}">${isRelativePdfPath(record.pdfFile) ? "Download from Drive" : "Download PDF"}</a>` : ""}
-        ${hasPdf ? `<button type="button" class="copy-path" data-copy-path="${escapeHtml(fileName)}">Copy File Name</button>` : ""}
       </div>
     </article>`;
   }).join("") : emptyState("No curriculum files found", "Try another description search or clear the filters.");
@@ -310,19 +307,6 @@ function bindEvents() {
       return;
     }
 
-    const downloadLink = event.target.closest("[data-download-pdf]");
-    if (downloadLink) {
-      downloadPdfSafely(event, downloadLink.dataset.url, downloadLink.dataset.rawPath, downloadLink.dataset.fileName);
-      return;
-    }
-
-    const copyButton = event.target.closest("[data-copy-path]");
-    if (copyButton) {
-      navigator.clipboard.writeText(copyButton.dataset.copyPath || "").then(() => {
-        copyButton.textContent = "Copied";
-        setTimeout(() => { copyButton.textContent = "Copy File Name"; }, 1300);
-      }).catch(() => alert(copyButton.dataset.copyPath || "No path available"));
-    }
   });
 }
 
