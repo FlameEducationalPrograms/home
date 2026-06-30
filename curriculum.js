@@ -269,7 +269,7 @@ function renderLibrary() {
         ${record.id ? `<span><strong>ID:</strong> ${escapeHtml(record.id)}</span>` : ""}
         ${record.pdfFile ? `<span><strong>PDF file:</strong> ${escapeHtml(record.pdfFile)}</span>` : ""}
       </div>
-      ${isRelativePdfPath(record.pdfFile) ? `<p class="file-warning">This record uses an AppSheet file path. Buttons will open the shared Google Drive folder searched by this filename: <strong>${escapeHtml(fileName)}</strong>.</p>` : ""}
+      ${isRelativePdfPath(record.pdfFile) ? ` : ""}
       <div class="card-actions">
         ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-open-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}">${isRelativePdfPath(record.pdfFile) ? "Open in Drive" : "Open PDF"}</a>` : ""}
         ${hasPdf ? `<a href="${escapeHtml(pdfUrl)}" data-download-pdf data-url="${escapeHtml(pdfUrl)}" data-raw-path="${escapeHtml(record.pdfFile)}" data-file-name="${escapeHtml(fileName)}">${isRelativePdfPath(record.pdfFile) ? "Download from Drive" : "Download PDF"}</a>` : ""}
