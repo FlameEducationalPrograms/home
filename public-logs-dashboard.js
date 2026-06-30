@@ -556,7 +556,7 @@ function countUniqueMissions(items) {
   return uniqueVisitCount(items);
 }
 
-function summaryTableHtml({ title, subtitle, rows, columns, open = false }) {
+function summaryTableHtml({ title, subtitle, rows, columns, open = false, totalDisplay = null, showPercentage = false, expectedTotal = 0 }) {
   const total = rows.reduce((sum, row) => sum + row.total, 0);
   if (!rows.length || !columns.length) {
     return `<details class="summary-table-block" ${open ? "open" : ""}>
@@ -577,12 +577,16 @@ function summaryTableHtml({ title, subtitle, rows, columns, open = false }) {
     </summary>
     <div class="summary-table-body table-wrap">
       <table>
-        <thead><tr><th>School</th>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>Total</th></tr></thead>
-        <tbody>${rows.map((row) => `<tr><td><strong>${escapeHtml(row.school)}</strong></td>${columns.map((column) => {
-          const value = row.counts[column.key] || 0;
-          const displayValue = typeof column.display === "function" ? column.display(value, row, column) : value;
-          return `<td>${escapeHtml(displayValue)}</td>`;
-        }).join("")}<td><strong>${row.total}</strong></td></tr>`).join("")}</tbody>
+        <thead><tr><th>School</th>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>Total</th>${showPercentage ? `<th>Percentage</th>` : ""}</tr></thead>
+        <tbody>${rows.map((row) => {
+          const totalValue = typeof totalDisplay === "function" ? totalDisplay(row) : row.total;
+          const percentageValue = expectedTotal ? `${percent(row.total, expectedTotal)}%` : "0%";
+          return `<tr><td><strong>${escapeHtml(row.school)}</strong></td>${columns.map((column) => {
+            const value = row.counts[column.key] || 0;
+            const displayValue = typeof column.display === "function" ? column.display(value, row, column) : value;
+            return `<td>${escapeHtml(displayValue)}</td>`;
+          }).join("")}<td><strong>${escapeHtml(totalValue)}</strong></td>${showPercentage ? `<td><strong>${escapeHtml(percentageValue)}</strong></td>` : ""}</tr>`;
+        }).join("")}</tbody>
       </table>
     </div>
   </details>`;
@@ -654,6 +658,7 @@ function buildActivitiesRows() {
 function renderMatrix() {
   const morningExpected = expectedMorningAssemblyCount();
   const principalsExpected = expectedPrincipalsVisitCount();
+  const combinedExpected = morningExpected + principalsExpected;
   const missionColumns = [
     {
       key: "Morning Assembly",
@@ -676,10 +681,13 @@ function renderMatrix() {
   const summaryBlocks = [
     summaryTableHtml({
       title: "Morning Assembly & Principals Visit",
-      subtitle: "Morning Assembly and Principals Visit show actual/expected counts. Expected = 5 Morning Assembly missions/week and 30 Principals Visit missions/week according to the selected From/To dates.",
+      subtitle: "Morning Assembly, Principals Visit, and Total show actual/expected counts. Expected = 5 Morning Assembly missions/week + 30 Principals Visit missions/week according to the selected From/To dates.",
       columns: missionColumns,
       rows: buildFixedModuleRows(missionColumns),
       open: true,
+      totalDisplay: (row) => `${row.total}/${combinedExpected}`,
+      showPercentage: true,
+      expectedTotal: combinedExpected,
     }),
     summaryTableHtml({
       title: "Follow-Up Missions",
