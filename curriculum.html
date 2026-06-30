@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FLAME Curriculum | Public Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="curriculum.css" />
+  </head>
+  <body>
+    <div class="page-glow" aria-hidden="true"></div>
+
+    <header class="site-header" aria-label="FLAME header">
+      <a class="brand-mark" href="index.html" aria-label="FLAME Function home">
+        <img src="flame-logo.png" alt="FLAME Function logo" />
+      </a>
+      <nav class="top-links" aria-label="Main links">
+        <a href="index.html">Home</a>
+        <a href="public-logs-dashboard.html">Dashboard</a>
+        <a href="https://flameeducationalprograms.github.io/lastnews/">Last News</a>
+      </nav>
+      <div class="media-controls" aria-label="Intro video controls">
+        <button class="video-control" id="videoControl" type="button">Pause Intro</button>
+        <button class="video-control sound-control" id="soundControl" type="button">Sound On</button>
+      </div>
+    </header>
+
+    <main class="shell" id="top">
+      <section class="hero-card" aria-labelledby="page-title">
+        <video class="hero-video" id="introVideo" autoplay muted loop playsinline poster="flame-logo.png">
+          <source src="intro.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-overlay" aria-hidden="true"></div>
+
+        <div class="hero-brand" aria-hidden="true">
+          <img src="flame-logo.png" alt="" />
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">FLAME Public Library</p>
+          <h1 id="page-title">Curriculum</h1>
+          <p>
+            A simple searchable library for FLAME curriculum PDF files. Search by lesson description,
+            open a file directly, or download it for service preparation.
+          </p>
+          <div class="hero-actions">
+            <a class="button-link primary" href="public-logs-dashboard.html">Open Public Dashboard</a>
+            <button id="refreshData" type="button">Refresh Curriculum</button>
+          </div>
+        </div>
+
+        <aside class="live-panel" aria-label="Curriculum status">
+          <span class="live-dot"></span>
+          <strong>Live from published curriculum sheet</strong>
+          <small id="lastUpdated">Loading...</small>
+        </aside>
+      </section>
+
+      <section class="filters-card" aria-labelledby="search-title">
+        <div>
+          <p class="eyebrow">Search</p>
+          <h2 id="search-title">Find a curriculum lesson</h2>
+          <p class="section-note">Search targets the <strong>Description</strong> column.</p>
+        </div>
+        <div class="search-panel">
+          <label>
+            Description search
+            <input id="descriptionSearch" type="search" placeholder="Example: داود، الصليب، القيامة..." autocomplete="off" />
+          </label>
+          <label>
+            Folder
+            <select id="folderFilter">
+              <option value="All">All folders</option>
+            </select>
+          </label>
+          <button id="clearSearch" type="button">Clear</button>
+        </div>
+      </section>
+
+      <div class="status-banner is-visible" id="loadStatus" role="status">Loading curriculum records...</div>
+
+      <section class="story-strip" aria-label="Curriculum summary">
+        <article>
+          <span id="kpiFiles">0</span>
+          <strong>PDF Files</strong>
+          <small>Visible curriculum files matching the current search.</small>
+        </article>
+        <article>
+          <span id="kpiFolders">0</span>
+          <strong>Folders</strong>
+          <small>Folder names detected from the published sheet.</small>
+        </article>
+        <article>
+          <span id="kpiSearch">All</span>
+          <strong>Current View</strong>
+          <small>Shows whether the list is filtered or showing all records.</small>
+        </article>
+      </section>
+
+      <section class="feature-card" aria-labelledby="library-title">
+        <div class="section-heading compact">
+          <p class="eyebrow">Curriculum Files</p>
+          <h2 id="library-title">Available PDF lessons</h2>
+          <p class="section-note">
+            The buttons use the PDF path from the <strong>PDF File</strong> column. If a file path is relative,
+            keep the matching PDF folder beside this page when publishing the website.
+          </p>
+        </div>
+        <div id="libraryGrid" class="library-grid"></div>
+      </section>
+    </main>
+
+    <script src="curriculum.js"></script>
+  </body>
+</html>
