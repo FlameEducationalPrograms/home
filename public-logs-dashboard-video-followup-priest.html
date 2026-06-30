@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FLAME Service Missions | Public Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="public-logs-dashboard-video-followup-priest.css" />
+  </head>
+  <body>
+    <header class="site-header" aria-label="Service header">
+      <a class="brand-mark" href="index.html" aria-label="FLAME Function home">
+        <img src="flame-logo.png" alt="FLAME Function St. Paul Coptic Service logo" />
+      </a>
+      <div class="media-controls" aria-label="Intro video controls">
+        <button class="video-control" id="videoControl" type="button">Pause Intro</button>
+        <button class="video-control sound-control" id="soundControl" type="button">Sound On</button>
+      </div>
+    </header>
+    <div class="page-glow" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="hero-card">
+        <video class="hero-video" id="introVideo" autoplay muted loop playsinline poster="flame-logo.png">
+          <source src="intro.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-overlay" aria-hidden="true"></div>
+        <a class="brand" href="index.html" aria-label="Back to FLAME Function homepage">
+          <img src="flame-logo.png" alt="FLAME Function logo" />
+        </a>
+        <section class="hero-copy" aria-labelledby="page-title">
+          <p class="eyebrow">Public Service Progress</p>
+          <h1 id="page-title">FLAME Missions Story</h1>
+          <p>
+            A simple visual window into actual school missions: prayer, values, medical care,
+            formation, and pastoral follow-up moving together across the service.
+          </p>
+          <div class="story-range" id="storyRange" aria-label="Story date range">
+            <span><strong>From</strong> <em id="storyFrom">Loading...</em></span>
+            <span><strong>To</strong> <em id="storyTo">Loading...</em></span>
+          </div>
+          <div class="hero-actions">
+            <button id="refreshData" type="button">Refresh Live Data</button>
+            <button id="printPage" type="button">Print Story</button>
+            <a class="button-link" href="https://flameeducationalprograms.github.io/activities/" target="_blank" rel="noopener">Activities Page</a>
+            <a class="button-link" href="https://flameeducationalprograms.github.io/lastnews/" target="_blank" rel="noopener">Last News</a>
+            <a class="button-link" href="https://www.google.com" target="_blank" rel="noopener">Birthdays Calendar</a>
+            <a class="button-link" href="https://www.yahoo.com" target="_blank" rel="noopener">Curriculum</a>
+            <a class="button-link apply-link" href="https://docs.google.com/forms/d/e/1FAIpQLSe_0l0V0qll5gIi-drEuf7AKeViTb3bQY_sMp4P4EAGMhL_9g/viewform?usp=header" target="_blank" rel="noopener">Apply to FLAME Function</a>
+          </div>
+        </section>
+        <aside class="live-panel" aria-label="Live dashboard status">
+          <span class="live-dot"></span>
+          <strong>Live from published mission logs</strong>
+          <small id="lastUpdated">Loading...</small>
+        </aside>
+      </header>
+
+      <section class="filters-card" aria-labelledby="filters-title">
+        <div>
+          <p class="eyebrow">Simple View</p>
+          <h2 id="filters-title">Focus the public story</h2>
+        </div>
+        <div class="filters-grid">
+          <label>Period<select id="filterPeriod">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="7">Last 7 Days</option>
+            <option value="30" selected>Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+          </select></label>
+          <label>Log Type<select id="filterModule"></select></label>
+          <label>School<select id="filterSchool"></select></label>
+          <label>Status<select id="filterStatus">
+            <option value="All">All</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+          </select></label>
+        </div>
+      </section>
+
+      <div class="status-banner is-visible" id="loadStatus" role="status">Loading published mission logs...</div>
+
+      <section class="story-strip" aria-label="Service progress summary">
+        <article>
+          <span id="kpiLogs">0</span>
+          <strong>Total Missions</strong>
+          <small>Unique missions calculated from responsible person, school, date, and log type</small>
+        </article>
+        <article>
+          <span id="kpiSchools">0</span>
+          <strong>Active Schools</strong>
+          <small>Schools with movement in the selected period</small>
+        </article>
+        <article>
+          <span id="kpiCompleted">0%</span>
+          <strong>Completion Signal</strong>
+          <small>Fully completed missions from this view</small>
+        </article>
+      </section>
+
+
+      <section class="feature-card details-card" aria-labelledby="details-title">
+        <div class="section-heading compact">
+          <p class="eyebrow">Detailed Story</p>
+          <h2 id="details-title">What happened &amp; what did not happen?</h2>
+          <p class="section-note">Grouped by school. Each mission is calculated from the responsible person, school, date, and log type. Open any school to see the task/question records behind each mission.</p>
+        </div>
+        <div id="detailsExplorer" class="details-explorer"></div>
+      </section>
+
+      <section class="section-heading">
+        <p class="eyebrow">Log Categories</p>
+        <h2>What is moving in the service?</h2>
+      </section>
+      <section class="module-grid" id="moduleGrid" aria-label="Missions by category"></section>
+
+      <section class="school-spotlight">
+        <article class="feature-card">
+          <div class="section-heading compact">
+            <p class="eyebrow">Schools</p>
+            <h2>Progress by school</h2>
+          </div>
+          <div id="schoolGrid" class="school-grid"></div>
+        </article>
+      </section>
+
+      <section class="feature-card printable-table-card">
+        <div class="section-heading compact">
+          <p class="eyebrow">Public Summary</p>
+          <h2>Schools × Missions matrix</h2>
+        </div>
+        <div id="matrixWrap" class="table-wrap"></div>
+      </section>
+    </main>
+
+    <script src="public-logs-dashboard-video-followup-priest.js"></script>
+  </body>
+</html>
