@@ -14,6 +14,7 @@ const MODULES = [
   { name: "Medical Log", icon: "✚", words: ["medical log", "medical", "medical visit", "medical visits", "clinic", "doctor", "health"] },
   { name: "Follow Up", icon: "✚", words: ["follow up", "followup", "follow"] },
   { name: "Formation", icon: "✦", words: ["formation"] },
+  { name: "Activities", icon: "★", words: ["activities", "activity", "event", "events"] },
 ];
 
 const state = {
@@ -157,12 +158,31 @@ function normalizeLog(row, sheet, index) {
   const done = parseDone(doneRaw);
   const module = get(row, ["Module", "Log", "Log Type", "Activity Type"], fallbackModule) || fallbackModule;
   const responsibleName = get(row, [
-    "Responsible Name", "Responsible", "Responsible Person", "Resident", "Resident Name", "Principal", "Principal Name",
+    "Responsible Name", "Responsible", "Responsible Person", "Visit Responsible", "Person Responsible",
+    "Resident", "Resident Name", "Principal", "Principal Name", "Visitor", "Visitor Name", "Servant", "Servant Name",
+    "Entered By", "Created By", "Submitted By", "Submitter", "User", "User Name", "User Email", "Email",
+    "اسم المسئول", "المسئول", "اسم المسؤول", "المسؤول", "اسم الخادم", "الخادم", "اسم الزائر", "الزائر"
+  ], "");
+  const teacherName = get(row, [
+    "Teacher Name", "Teacher", "Class Teacher", "Class Teacher Name", "Visited Teacher", "Teacher Visited",
+    "Teacher / Class", "Teacher/Class", "اسم المدرس", "المدرس", "اسم المعلم", "المعلم", "مدرس الفصل"
+  ], "");
+  const className = get(row, [
+    "Class", "Class Name", "Grade", "Grade/Class", "Grade / Class", "Class/Grade", "Stage", "Year", "Room",
+    "Year Group", "Level", "الفصل", "الصف", "المرحلة", "السنة", "فصل"
+  ], "");
+  const followUpTask = get(row, [
+    "Follow-Up", "Follow Up", "FollowUp", "Follow-up", "Follow up", "Followup",
+    "Follow-Up Task", "Follow Up Task", "Follow-up Task", "Task Follow-Up",
+    "متابعة", "المتابعة", "بند المتابعة", "مهمة المتابعة"
+  ], "");
+  const priestName = get(row, [
+    "Priest Name", "Priest", "Father Name", "Abouna", "Abona", "Fr", "Fr.", "Rev",
+    "اسم الأب الكاهن", "الأب الكاهن", "الكاهن", "أبونا", "ابونا", "اسم الكاهن"
+  ], "");
+  const enteredBy = responsibleName || get(row, [
     "Entered By", "Created By", "Submitted By", "Submitter", "User", "User Name", "User Email", "Email"
-  ], "Not specified");
-  const teacherName = get(row, ["Teacher Name", "Teacher", "Class Teacher", "Class Teacher Name"], "Not specified");
-  const className = get(row, ["Class", "Class Name", "Grade", "Grade/Class", "Stage", "Year", "Room"], "Not specified");
-  const enteredBy = responsibleName || "Not specified";
+  ], "");
   return {
     id: `${key(sheet.name)}-${index + 1}`,
     module,
@@ -173,6 +193,8 @@ function normalizeLog(row, sheet, index) {
     responsibleName,
     teacherName,
     className,
+    followUpTask,
+    priestName,
     date,
     done,
     doneRaw,
@@ -206,7 +228,7 @@ function percent(part, total) {
 
 function groupedBy(items, prop) {
   return items.reduce((acc, item) => {
-    const value = clean(item[prop]) || "Not specified";
+    const value = clean(item[prop]) || "";
     if (!acc[value]) acc[value] = [];
     acc[value].push(item);
     return acc;
@@ -367,19 +389,29 @@ function isFollowUp(item) {
 }
 
 function taskLine(item) {
-  const who = item.enteredBy || "Not specified";
+  const who = clean(item.enteredBy || item.responsibleName || "");
   const principalsDetails = [
-    `Responsible: ${item.responsibleName || who || "Not specified"}`,
-    `Teacher: ${item.teacherName || "Not specified"}`,
-    `Class: ${item.className || "Not specified"}`
-  ].join(", ");
-  const bracketText = isPrincipalsVisit(item) ? principalsDetails : who;
-  const taskLabel = isFollowUp(item)
-    ? `${item.done ? "Task performed" : "Task not performed"}: ${item.title || item.module}`
-    : (item.title || item.module);
+    clean(item.responsibleName || who) ? `Responsible: ${clean(item.responsibleName || who)}` : "",
+    clean(item.teacherName) ? `Teacher: ${clean(item.teacherName)}` : "",
+    clean(item.className) ? `Class: ${clean(item.className)}` : ""
+  ].filter(Boolean).join(", ");
+
+  let taskLabel = item.title || item.module;
+  let bracketText = who;
+
+  if (isPrincipalsVisit(item)) {
+    bracketText = principalsDetails;
+  }
+
+  if (isFollowUp(item)) {
+    taskLabel = clean(item.followUpTask) || item.title || item.module;
+    bracketText = clean(item.priestName);
+  }
+
+  const bracketHtml = bracketText ? ` <em>(${escapeHtml(bracketText)})</em>` : "";
   return `<li class="task-line ${item.done ? "done" : "pending"}">
     <span class="task-status">${item.done ? "✓" : "×"}</span>
-    <span class="task-text"><strong>${escapeHtml(taskLabel)}</strong> <em>(${escapeHtml(bracketText)})</em></span>
+    <span class="task-text"><strong>${escapeHtml(taskLabel)}</strong>${bracketHtml}</span>
     <small>${escapeHtml(item.module)} · ${formatDate(item.date)}</small>
   </li>`;
 }
@@ -442,22 +474,122 @@ function renderDetails() {
   }).join("") : emptyState("No detailed story yet", "Change the filters or refresh the published logs.");
 }
 
-function renderMatrix() {
-  const schools = unique(state.filtered.map((l) => l.school)).slice(0, 25);
-  const modules = unique(state.filtered.map((l) => l.module));
-  if (!schools.length || !modules.length) {
-    $("matrixWrap").innerHTML = emptyState("No matrix data yet");
-    return;
+function moduleMatches(log, words) {
+  const combined = key(`${log.module || ""} ${log.sourceSheet || ""} ${log.title || ""}`);
+  return words.some((word) => combined.includes(key(word)));
+}
+
+function followUpLabel(item) {
+  return clean(item.followUpTask) || clean(item.title) || "Follow-Up";
+}
+
+function countUniqueMissions(items) {
+  return uniqueVisitCount(items);
+}
+
+function summaryTableHtml({ title, subtitle, rows, columns, open = false }) {
+  const total = rows.reduce((sum, row) => sum + row.total, 0);
+  if (!rows.length || !columns.length) {
+    return `<details class="summary-table-block" ${open ? "open" : ""}>
+      <summary>
+        <span class="plus-icon" aria-hidden="true"></span>
+        <span class="summary-table-main"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(subtitle)}</small></span>
+        <span class="summary-table-count">0</span>
+      </summary>
+      <div class="summary-table-body">${emptyState("No summary data yet", "No matching records are available in the current filters.")}</div>
+    </details>`;
   }
-  $("matrixWrap").innerHTML = `<table>
-    <thead><tr><th>School</th>${modules.map((m) => `<th>${escapeHtml(m)}</th>`).join("")}<th>Total</th><th>Completion</th></tr></thead>
-    <tbody>${schools.map((school) => {
-      const schoolLogs = state.filtered.filter((l) => l.school === school);
-      const total = uniqueVisitCount(schoolLogs);
-      const rate = percent(completedVisitCount(schoolLogs), total);
-      return `<tr><td><strong>${escapeHtml(school)}</strong></td>${modules.map((m) => `<td>${uniqueVisitCount(schoolLogs.filter((l) => l.module === m))}</td>`).join("")}<td>${total}</td><td>${rate}%</td></tr>`;
-    }).join("")}</tbody>
-  </table>`;
+
+  return `<details class="summary-table-block" ${open ? "open" : ""}>
+    <summary>
+      <span class="plus-icon" aria-hidden="true"></span>
+      <span class="summary-table-main"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(subtitle)}</small></span>
+      <span class="summary-table-count">${total}</span>
+    </summary>
+    <div class="summary-table-body table-wrap">
+      <table>
+        <thead><tr><th>School</th>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>Total</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr><td><strong>${escapeHtml(row.school)}</strong></td>${columns.map((column) => `<td>${row.counts[column.key] || 0}</td>`).join("")}<td><strong>${row.total}</strong></td></tr>`).join("")}</tbody>
+      </table>
+    </div>
+  </details>`;
+}
+
+function buildFixedModuleRows(columns) {
+  const schools = unique(state.filtered.map((log) => log.school));
+  return schools.map((school) => {
+    const schoolLogs = state.filtered.filter((log) => log.school === school);
+    const counts = Object.fromEntries(columns.map((column) => [
+      column.key,
+      countUniqueMissions(schoolLogs.filter((log) => moduleMatches(log, column.words)))
+    ]));
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    return { school, counts, total };
+  }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
+}
+
+function buildFollowUpRows() {
+  const followLogs = state.filtered.filter((log) => moduleMatches(log, ["follow up", "followup", "follow-up", "follow"]));
+  const labels = unique(followLogs.map(followUpLabel)).slice(0, 3);
+  const columns = labels.length
+    ? labels.map((label) => ({ key: label, label }))
+    : [{ key: "Follow-Up", label: "Follow-Up" }];
+  const schools = unique(followLogs.map((log) => log.school));
+  const rows = schools.map((school) => {
+    const schoolLogs = followLogs.filter((log) => log.school === school);
+    const counts = Object.fromEntries(columns.map((column) => [
+      column.key,
+      countUniqueMissions(schoolLogs.filter((log) => followUpLabel(log) === column.key || (!labels.length && moduleMatches(log, ["follow"]))))
+    ]));
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    return { school, counts, total };
+  }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
+  return { columns, rows };
+}
+
+function renderMatrix() {
+  const missionColumns = [
+    { key: "Morning Assembly", label: "Morning Assembly", words: ["morning assembly", "assembly", "morning"] },
+    { key: "Principals Visit", label: "Principals Visit", words: ["principals visit", "principal visit", "visits", "visit"] },
+  ];
+
+  const follow = buildFollowUpRows();
+
+  const summaryBlocks = [
+    summaryTableHtml({
+      title: "Morning Assembly & Principals Visit",
+      subtitle: "Counts per school for Morning Assembly and Principals Visit only.",
+      columns: missionColumns,
+      rows: buildFixedModuleRows(missionColumns),
+      open: true,
+    }),
+    summaryTableHtml({
+      title: "Follow-Up Missions",
+      subtitle: "Counts per school for the three Follow-Up types found in the Follow-Up column.",
+      columns: follow.columns,
+      rows: follow.rows,
+    }),
+    summaryTableHtml({
+      title: "Values Missions",
+      subtitle: "Values counts per school.",
+      columns: [{ key: "Values", label: "Values", words: ["values class", "value class", "values", "value"] }],
+      rows: buildFixedModuleRows([{ key: "Values", label: "Values", words: ["values class", "value class", "values", "value"] }]),
+    }),
+    summaryTableHtml({
+      title: "Medical Missions",
+      subtitle: "Medical counts per school.",
+      columns: [{ key: "Medical", label: "Medical", words: ["medical log", "medical", "medical visit", "medical visits", "clinic", "doctor", "health"] }],
+      rows: buildFixedModuleRows([{ key: "Medical", label: "Medical", words: ["medical log", "medical", "medical visit", "medical visits", "clinic", "doctor", "health"] }]),
+    }),
+    summaryTableHtml({
+      title: "Activities Missions",
+      subtitle: "Activities counts per school.",
+      columns: [{ key: "Activities", label: "Activities", words: ["activities", "activity", "event", "events"] }],
+      rows: buildFixedModuleRows([{ key: "Activities", label: "Activities", words: ["activities", "activity", "event", "events"] }]),
+    }),
+  ];
+
+  $("matrixWrap").innerHTML = summaryBlocks.join("");
 }
 
 function render() {
