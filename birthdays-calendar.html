@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FLAME Birthdays Calendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="birthdays-calendar.css" />
+  </head>
+  <body>
+    <div class="page-glow" aria-hidden="true"></div>
+
+    <header class="site-header" aria-label="FLAME header">
+      <a class="brand-mark" href="index.html" aria-label="FLAME Function home">
+        <img src="flame-logo.png" alt="FLAME Function logo" />
+      </a>
+      <nav class="top-links" aria-label="Main links">
+        <a href="index.html">Home</a>
+        <a href="public-logs-dashboard.html">Dashboard</a>
+        <a href="curriculum.html">Curriculum</a>
+      </nav>
+      <div class="media-controls" aria-label="Intro video controls">
+        <button class="video-control" id="videoControl" type="button">Pause Intro</button>
+        <button class="video-control sound-control" id="soundControl" type="button">Sound On</button>
+      </div>
+    </header>
+
+    <main class="shell" id="top">
+      <section class="hero-card" aria-labelledby="page-title">
+        <video class="hero-video" id="introVideo" autoplay muted loop playsinline poster="flame-logo.png">
+          <source src="intro.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-overlay" aria-hidden="true"></div>
+
+        <div class="hero-brand" aria-hidden="true">
+          <img src="flame-logo.png" alt="" />
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">FLAME People Calendar</p>
+          <h1 id="page-title">Birthdays Calendar</h1>
+          <p>
+            A live calendar that collects birthdays from every published sheet, converts each birth date to the current year, and shows the person details when you select a day.
+          </p>
+          <div class="hero-actions">
+            <a class="button-link primary" href="public-logs-dashboard.html">Open Public Dashboard</a>
+            <button id="refreshData" type="button">Refresh Birthdays</button>
+          </div>
+        </div>
+
+        <aside class="live-panel" aria-label="Birthdays status">
+          <span class="live-dot"></span>
+          <strong>Live from published sheets</strong>
+          <small id="lastUpdated">Loading...</small>
+        </aside>
+      </section>
+
+      <section class="filters-card" aria-labelledby="filters-title">
+        <div>
+          <p class="eyebrow">Calendar Controls</p>
+          <h2 id="filters-title">Explore birthdays</h2>
+          <p class="section-note">Click any calendar day to see birthdays outside the calendar.</p>
+        </div>
+        <div class="controls-grid">
+          <button id="previousMonth" type="button">Previous Month</button>
+          <button id="todayButton" type="button">Current Month</button>
+          <button id="nextMonth" type="button">Next Month</button>
+          <label>
+            Search name / contact / position
+            <input id="birthdaySearch" type="search" placeholder="Name, phone, email, sheet..." autocomplete="off" />
+          </label>
+        </div>
+      </section>
+
+      <div class="status-banner is-visible" id="loadStatus" role="status">Loading birthdays...</div>
+
+      <section class="story-strip" aria-label="Birthdays summary">
+        <article>
+          <span id="kpiBirthdays">0</span>
+          <strong>Birthdays Found</strong>
+          <small>Records with DOB or Date of Birth detected across all sheets.</small>
+        </article>
+        <article>
+          <span id="kpiThisMonth">0</span>
+          <strong>This Month</strong>
+          <small>Birthdays visible in the current calendar month.</small>
+        </article>
+        <article>
+          <span id="kpiSheets">0</span>
+          <strong>Positions / Sheets</strong>
+          <small>Sheet names are used as the position value.</small>
+        </article>
+      </section>
+
+      <section class="calendar-layout">
+        <article class="feature-card calendar-card" aria-labelledby="calendar-title">
+          <div class="section-heading compact calendar-heading">
+            <div>
+              <p class="eyebrow">Calendar</p>
+              <h2 id="calendarTitle">Loading...</h2>
+            </div>
+            <span class="year-pill" id="calendarYear">Current year</span>
+          </div>
+          <div class="weekday-grid" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid" aria-label="Birthdays calendar"></div>
+        </article>
+
+        <aside class="feature-card details-card" aria-labelledby="details-title">
+          <div class="section-heading compact">
+            <p class="eyebrow">Selected Day</p>
+            <h2 id="detailsTitle">Select a day</h2>
+            <p class="section-note" id="detailsNote">Click a date on the calendar to show the date, name, position, and contacting data if available.</p>
+          </div>
+          <div id="birthdayDetails" class="birthday-details"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="birthdays-calendar.js"></script>
+  </body>
+</html>
