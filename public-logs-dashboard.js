@@ -591,7 +591,12 @@ function buildActivitiesRows() {
   const schools = unique(activityLogs.map((log) => log.school));
   const rows = schools.map((school) => {
     const schoolLogs = activityLogs.filter((log) => log.school === school);
-    const counts = { Activities: countUniqueMissions(schoolLogs) };
+
+    // Activities are counted as sheet records, not as unique missions.
+    // This is important because the Activities sheet can contain more than one activity
+    // for the same school on the same date, and each row should be counted.
+    const counts = { Activities: taskCount(schoolLogs) };
+
     return { school, counts, total: counts.Activities };
   }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
   return { columns, rows };
