@@ -230,6 +230,18 @@ button:hover, select:hover {
   box-shadow: 0 10px 26px rgba(52, 169, 214, 0.16);
 }
 
+.button-link.apply-link {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--flame), var(--flame-deep));
+  box-shadow: 0 14px 28px rgba(167, 25, 20, 0.16);
+}
+
+.button-link.apply-link:hover {
+  border-color: transparent;
+  box-shadow: 0 16px 32px rgba(167, 25, 20, 0.22);
+}
+
 .live-panel {
   display: grid;
   gap: 8px;
@@ -797,5 +809,158 @@ th { color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-trans
   .school-detail:not([open]) .school-detail-body,
   .module-detail-block:not([open]) .module-detail-content {
     display: block;
+  }
+}
+
+
+/* ===== Homepage-style fixed header, logo, and video controls ===== */
+.site-header {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1120px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.brand-mark,
+.media-controls {
+  pointer-events: auto;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(74px, 8vw, 116px);
+  aspect-ratio: 1 / 1;
+  padding: 7px;
+  border: 1px solid rgba(234, 223, 210, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 34px rgba(16, 33, 58, 0.13);
+  backdrop-filter: blur(12px);
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.media-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.video-control {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(52, 169, 214, 0.28);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 34px rgba(16, 33, 58, 0.1);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.video-control:first-child {
+  color: var(--ink);
+  border: 1px solid rgba(52, 169, 214, 0.28);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.video-control:hover {
+  border-color: var(--sky);
+  box-shadow: 0 14px 28px rgba(52, 169, 214, 0.15);
+}
+
+/* Give room for the fixed header */
+.shell {
+  padding-top: 152px;
+}
+
+/* ===== Dashboard hero background video ===== */
+.hero-card {
+  isolation: isolate;
+}
+
+.hero-video,
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-video {
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.78;
+  filter: saturate(1.14) contrast(1.02);
+}
+
+.hero-overlay {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(255, 253, 249, 0.92) 0%, rgba(255, 253, 249, 0.78) 48%, rgba(255, 253, 249, 0.58) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(248, 242, 234, 0.52) 100%);
+}
+
+/* Keep the original dashboard hero logo visible above the video */
+.hero-card > .brand,
+.hero-card > .hero-copy,
+.hero-card > .live-panel {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 680px) {
+  .site-header {
+    top: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .brand-mark {
+    width: 74px;
+  }
+
+  .media-controls {
+    gap: 8px;
+  }
+
+  .video-control {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 0.88rem;
+  }
+
+  .shell {
+    padding-top: 118px;
+  }
+
+  .hero-overlay {
+    background:
+      linear-gradient(90deg, rgba(255, 253, 249, 0.94), rgba(255, 253, 249, 0.78)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(248, 242, 234, 0.58));
+  }
+}
+
+@media print {
+  .site-header,
+  .hero-video,
+  .hero-overlay {
+    display: none !important;
+  }
+
+  .shell {
+    padding-top: 0;
   }
 }

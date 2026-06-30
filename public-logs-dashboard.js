@@ -156,11 +156,13 @@ function normalizeLog(row, sheet, index) {
   const doneRaw = get(row, ["Done", "Completed", "Status", "Is Done", "Checked", "Answer", "Result"]);
   const done = parseDone(doneRaw);
   const module = get(row, ["Module", "Log", "Log Type", "Activity Type"], fallbackModule) || fallbackModule;
-  const enteredBy = get(row, [
-    "Entered By", "Created By", "Submitted By", "Submitter", "User", "User Name", "User Email", "Email",
-    "Responsible", "Responsible Person", "Resident", "Resident Name", "Principal", "Principal Name",
-    "Teacher", "Teacher Name", "Priest", "Priest Name"
+  const responsibleName = get(row, [
+    "Responsible Name", "Responsible", "Responsible Person", "Resident", "Resident Name", "Principal", "Principal Name",
+    "Entered By", "Created By", "Submitted By", "Submitter", "User", "User Name", "User Email", "Email"
   ], "Not specified");
+  const teacherName = get(row, ["Teacher Name", "Teacher", "Class Teacher", "Class Teacher Name"], "Not specified");
+  const className = get(row, ["Class", "Class Name", "Grade", "Grade/Class", "Stage", "Year", "Room"], "Not specified");
+  const enteredBy = responsibleName || "Not specified";
   return {
     id: `${key(sheet.name)}-${index + 1}`,
     module,
@@ -168,6 +170,9 @@ function normalizeLog(row, sheet, index) {
     country,
     title,
     enteredBy,
+    responsibleName,
+    teacherName,
+    className,
     date,
     done,
     doneRaw,
@@ -306,7 +311,7 @@ function renderModules() {
       <h3>${escapeHtml(name)}</h3>
       <div class="big-number">${visits}</div>
       <div class="progress-track" aria-label="${rate}% completed"><div class="progress-fill" style="width:${rate}%"></div></div>
-      <p class="card-note">${badge(signal)}<br>${completed} completed visits across ${schools} schools.<br><small>${taskCount(items)} checked task records.</small></p>
+      <p class="card-note">${badge(signal)}<br>${completed} completed missions across ${schools} schools.<br><small>${taskCount(items)} checked task records.</small></p>
     </article>`;
   }).join("") : emptyState("No log categories yet");
 }
@@ -324,7 +329,7 @@ function renderSchools() {
     return `<article class="school-card">
       <div class="school-card-top"><h3>${escapeHtml(r.school)}</h3>${badge(signal)}</div>
       <div class="school-meta">
-        <span><strong>${r.visits}</strong><br>visits</span>
+        <span><strong>${r.visits}</strong><br>missions</span>
         <span><strong>${r.modules}</strong><br>types</span>
         <span><strong>${r.rate}%</strong><br>signal</span>
       </div>
@@ -351,11 +356,30 @@ function renderRecent() {
 }
 
 
+function isPrincipalsVisit(item) {
+  const value = key(`${item.module || ""} ${item.sourceSheet || ""}`);
+  return value.includes("principal") || value.includes("principals visit");
+}
+
+function isFollowUp(item) {
+  const value = key(`${item.module || ""} ${item.sourceSheet || ""}`);
+  return value.includes("follow up") || value.includes("followup") || value === "follow";
+}
+
 function taskLine(item) {
   const who = item.enteredBy || "Not specified";
+  const principalsDetails = [
+    `Responsible: ${item.responsibleName || who || "Not specified"}`,
+    `Teacher: ${item.teacherName || "Not specified"}`,
+    `Class: ${item.className || "Not specified"}`
+  ].join(", ");
+  const bracketText = isPrincipalsVisit(item) ? principalsDetails : who;
+  const taskLabel = isFollowUp(item)
+    ? `${item.done ? "Task performed" : "Task not performed"}: ${item.title || item.module}`
+    : (item.title || item.module);
   return `<li class="task-line ${item.done ? "done" : "pending"}">
     <span class="task-status">${item.done ? "✓" : "×"}</span>
-    <span class="task-text"><strong>${escapeHtml(item.title || item.module)}</strong> <em>(${escapeHtml(who)})</em></span>
+    <span class="task-text"><strong>${escapeHtml(taskLabel)}</strong> <em>(${escapeHtml(bracketText)})</em></span>
     <small>${escapeHtml(item.module)} · ${formatDate(item.date)}</small>
   </li>`;
 }
@@ -382,7 +406,7 @@ function renderDetails() {
         <span class="plus-icon" aria-hidden="true"></span>
         <span class="summary-main">
           <strong>${escapeHtml(schoolRow.school)}</strong>
-          <small>${schoolRow.visits} visits · ${schoolRow.items.length} checked task records · ${schoolRow.completed} completed visits · ${schoolRow.pending} pending visits · latest ${formatDate(schoolRow.latest)}</small>
+          <small>${schoolRow.visits} missions · ${schoolRow.items.length} checked task records · ${schoolRow.completed} completed missions · ${schoolRow.pending} pending missions · latest ${formatDate(schoolRow.latest)}</small>
         </span>
         <span class="summary-rate">${schoolRow.rate}%</span>
       </summary>
@@ -396,17 +420,17 @@ function renderDetails() {
               <span class="module-icon-small">${moduleIcon(moduleName)}</span>
               <span class="module-summary-main">
                 <strong>${escapeHtml(moduleName)}</strong>
-                <small>${uniqueVisitCount(items)} visits · ${items.length} task records</small>
+                <small>${uniqueVisitCount(items)} missions · ${items.length} task records</small>
               </span>
             </summary>
             <div class="module-detail-content">
               <div class="happened-grid">
                 <div class="happened-column">
-                  <h4>What happened</h4>
+                  <h4>${items.some(isFollowUp) ? "Tasks performed" : "What happened"}</h4>
                   <ul>${completedItems.length ? completedItems.map(taskLine).join("") : `<li class="muted-line">No completed records in this view.</li>`}</ul>
                 </div>
                 <div class="happened-column">
-                  <h4>What did not happen</h4>
+                  <h4>${items.some(isFollowUp) ? "Tasks not performed" : "What did not happen"}</h4>
                   <ul>${pendingItems.length ? pendingItems.map(taskLine).join("") : `<li class="muted-line">No pending records in this view.</li>`}</ul>
                 </div>
               </div>
@@ -475,7 +499,7 @@ async function loadDashboard() {
     state.filters.status = $("filterStatus").value || "All";
     render();
     $("lastUpdated").textContent = `Last updated ${new Date().toLocaleString()}`;
-    status.textContent = state.logs.length ? `Loaded ${uniqueVisitCount(state.logs).toLocaleString()} visits from ${state.logs.length.toLocaleString()} checked task records.` : "No log records were found in the published sheets.";
+    status.textContent = state.logs.length ? `Loaded ${uniqueVisitCount(state.logs).toLocaleString()} missions from ${state.logs.length.toLocaleString()} checked task records.` : "No log records were found in the published sheets.";
     setTimeout(() => status.classList.remove("is-visible"), 2600);
   } catch (error) {
     console.error(error);
@@ -487,3 +511,42 @@ async function loadDashboard() {
 bindEvents();
 loadDashboard();
 setInterval(loadDashboard, 5 * 60 * 1000);
+
+
+/* ===== Homepage intro video controls applied to dashboard ===== */
+const introVideo = document.querySelector("#introVideo");
+const videoControl = document.querySelector("#videoControl");
+const soundControl = document.querySelector("#soundControl");
+
+function updateVideoButton() {
+  if (!introVideo || !videoControl || !soundControl) return;
+  videoControl.textContent = introVideo.paused ? "Play Intro" : "Pause Intro";
+  soundControl.textContent = introVideo.muted ? "Sound On" : "Sound Off";
+}
+
+if (introVideo && videoControl && soundControl) {
+  videoControl.addEventListener("click", async () => {
+    if (introVideo.paused) {
+      await introVideo.play().catch(() => {});
+    } else {
+      introVideo.pause();
+    }
+
+    updateVideoButton();
+  });
+
+  soundControl.addEventListener("click", async () => {
+    introVideo.muted = !introVideo.muted;
+
+    if (!introVideo.muted && introVideo.paused) {
+      await introVideo.play().catch(() => {});
+    }
+
+    updateVideoButton();
+  });
+
+  introVideo.addEventListener("play", updateVideoButton);
+  introVideo.addEventListener("pause", updateVideoButton);
+  introVideo.addEventListener("volumechange", updateVideoButton);
+  updateVideoButton();
+}
