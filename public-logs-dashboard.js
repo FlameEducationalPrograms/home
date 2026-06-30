@@ -1,3 +1,5 @@
+const VALUES_WORKBOOK_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3Bhb3la7QjEHEPRSinb5mvAjr4hYh_5Sru71WtcWqqd1rkTG4dOGR9BQb5eXFQ11F77233Jh-106P/pubhtml";
+const VALUES_WORKBOOK_BASE = VALUES_WORKBOOK_URL.replace(/\/pubhtml.*$/, "");
 const ACTIVITIES_WORKBOOK_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTTaWrIhTwTpW3GWaeKMULfeC4Qeoh-JrLjBves7ZRvW-z2yX0tVcOB2ytIZ1JJo3lXlBO6ahvb46g/pubhtml";
 const ACTIVITIES_WORKBOOK_BASE = ACTIVITIES_WORKBOOK_URL.replace(/\/pubhtml.*$/, "");
 
@@ -7,7 +9,7 @@ const WORKBOOK_URLS = [
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYYBB5ZadA4Hhyc9nuFvfAwIQG_uolpXyk3ovhWHbwJEPk5IF8ht2eXo-0as1zvjK_R_tiPaCXmhSZ/pubhtml",
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFHXifAA7qF5I0XTOV9aN3ATCuWQQFlCVrZlJomZsd8c-vWZT3xuq-f4z8-Qz8J0lcddgJsuTejKYa/pubhtml",
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNalcGSv5g3rtcaycU-7DWLrKSTuPqxLo_bdOUyJgtQLbHyPMkEi1itPWtutizdhpDCDZaUIgEuof9/pubhtml",
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3Bhb3la7QjEHEPRSinb5mvAjr4hYh_5Sru71WtcWqqd1rkTG4dOGR9BQb5eXFQ11F77233Jh-106P/pubhtml",
+  VALUES_WORKBOOK_URL,
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZbhJsqbI7Wj2lcokI2drH1bh3RWSKd5CSMibYcOha9JRllh_BPsIGV7mKzy0s98mrEy0XvqykIjow/pubhtml",
 ];
 
@@ -96,7 +98,7 @@ function logDateRange(items) {
 }
 
 function renderStoryRange() {
-  const range = logDateRange(state.logs);
+  const range = logDateRange(state.logs.filter((log) => !isActivitiesSheetLog(log)));
   if ($("storyFrom")) $("storyFrom").textContent = formatDate(range.from);
   if ($("storyTo")) $("storyTo").textContent = formatDate(range.to);
 }
@@ -305,8 +307,9 @@ function emptyState(title, detail = "No records are available for this view yet.
 function updateFilterOptions() {
   const currentModule = $("filterModule").value || "All";
   const currentSchool = $("filterSchool").value || "All";
-  const moduleValues = ["All", ...unique(state.logs.map((log) => log.module))];
-  const schoolSource = state.filters.module === "All" ? state.logs : state.logs.filter((log) => log.module === state.filters.module);
+  const filterSource = state.logs.filter((log) => !isActivitiesSheetLog(log));
+  const moduleValues = ["All", ...unique(filterSource.map((log) => log.module))];
+  const schoolSource = state.filters.module === "All" ? filterSource : filterSource.filter((log) => log.module === state.filters.module);
   const schoolValues = ["All", ...unique(schoolSource.map((log) => log.school))];
   $("filterModule").innerHTML = moduleValues.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
   $("filterSchool").innerHTML = schoolValues.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
@@ -315,7 +318,7 @@ function updateFilterOptions() {
 }
 
 function renderKpis() {
-  const logs = state.filtered;
+  const logs = dashboardLogs();
   const totalVisits = uniqueVisitCount(logs);
   const completedVisits = completedVisitCount(logs);
   $("kpiLogs").textContent = totalVisits.toLocaleString();
@@ -324,7 +327,7 @@ function renderKpis() {
 }
 
 function renderModules() {
-  const grouped = groupedBy(state.filtered, "module");
+  const grouped = groupedBy(dashboardLogs(), "module");
   const modules = Object.entries(grouped).sort((a, b) => uniqueVisitCount(b[1]) - uniqueVisitCount(a[1]));
   $("moduleGrid").innerHTML = modules.length ? modules.map(([name, items]) => {
     const visits = uniqueVisitCount(items);
@@ -343,7 +346,7 @@ function renderModules() {
 }
 
 function renderSchools() {
-  const grouped = groupedBy(state.filtered, "school");
+  const grouped = groupedBy(dashboardLogs(), "school");
   const rows = Object.entries(grouped).map(([school, items]) => {
     const visits = uniqueVisitCount(items);
     const completed = completedVisitCount(items);
@@ -421,7 +424,7 @@ function taskLine(item) {
 }
 
 function renderDetails() {
-  const grouped = groupedBy(state.filtered, "school");
+  const grouped = groupedBy(dashboardLogs(), "school");
   const schools = Object.entries(grouped)
     .map(([school, items]) => {
       const visits = uniqueVisitCount(items);
@@ -483,6 +486,21 @@ function moduleMatches(log, words) {
   return words.some((word) => combined.includes(key(word)));
 }
 
+function isActivitiesSheetLog(log) {
+  const sameWorkbook = key(log.sourceKey || "") === key(ACTIVITIES_WORKBOOK_BASE);
+  return sameWorkbook && key(log.sourceSheet || "").includes("activities");
+}
+
+function isValuesClassLog(log) {
+  const sameWorkbook = key(log.sourceKey || "") === key(VALUES_WORKBOOK_BASE);
+  return sameWorkbook && key(log.sourceSheet || "") === key("Values Class Log");
+}
+
+function dashboardLogs() {
+  // Activities must appear only in the Public Summary Activities table, not in KPIs, filters, details, modules, or school cards.
+  return state.filtered.filter((log) => !isActivitiesSheetLog(log));
+}
+
 function followUpLabel(item) {
   // Public Summary Follow-Up columns must come ONLY from the actual "Follow-Up" sheet column.
   // Do not fall back to title/question text here, because unrelated questions can appear as wrong columns.
@@ -522,9 +540,10 @@ function summaryTableHtml({ title, subtitle, rows, columns, open = false }) {
 }
 
 function buildFixedModuleRows(columns) {
-  const schools = unique(state.filtered.map((log) => log.school));
+  const source = dashboardLogs();
+  const schools = unique(source.map((log) => log.school));
   return schools.map((school) => {
-    const schoolLogs = state.filtered.filter((log) => log.school === school);
+    const schoolLogs = source.filter((log) => log.school === school);
     const counts = Object.fromEntries(columns.map((column) => [
       column.key,
       countUniqueMissions(schoolLogs.filter((log) => moduleMatches(log, column.words)))
@@ -535,7 +554,7 @@ function buildFixedModuleRows(columns) {
 }
 
 function buildFollowUpRows() {
-  const followLogs = state.filtered.filter((log) =>
+  const followLogs = dashboardLogs().filter((log) =>
     moduleMatches(log, ["follow up", "followup", "follow-up", "follow"]) && followUpLabel(log)
   );
   const labels = unique(followLogs.map(followUpLabel));
@@ -553,9 +572,17 @@ function buildFollowUpRows() {
   return { columns, rows };
 }
 
-function isActivitiesSheetLog(log) {
-  const sameWorkbook = key(log.sourceKey || "") === key(ACTIVITIES_WORKBOOK_BASE);
-  return sameWorkbook && moduleMatches(log, ["activities", "activity"]);
+
+function buildValuesRows() {
+  const columns = [{ key: "Values", label: "Values" }];
+  const valuesLogs = state.filtered.filter(isValuesClassLog);
+  const schools = unique(valuesLogs.map((log) => log.school));
+  const rows = schools.map((school) => {
+    const schoolLogs = valuesLogs.filter((log) => log.school === school);
+    const counts = { Values: countUniqueMissions(schoolLogs) };
+    return { school, counts, total: counts.Values };
+  }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
+  return { columns, rows };
 }
 
 function buildActivitiesRows() {
@@ -577,6 +604,7 @@ function renderMatrix() {
   ];
 
   const follow = buildFollowUpRows();
+  const values = buildValuesRows();
   const activities = buildActivitiesRows();
 
   const summaryBlocks = [
@@ -595,9 +623,9 @@ function renderMatrix() {
     }),
     summaryTableHtml({
       title: "Values Missions",
-      subtitle: "Values counts per school.",
-      columns: [{ key: "Values", label: "Values", words: ["values class", "value class", "values", "value"] }],
-      rows: buildFixedModuleRows([{ key: "Values", label: "Values", words: ["values class", "value class", "values", "value"] }]),
+      subtitle: "Values counts per school from the Values Class Log sheet only.",
+      columns: values.columns,
+      rows: values.rows,
     }),
     summaryTableHtml({
       title: "Medical Missions",
