@@ -13,35 +13,6 @@ const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 const key = (value) => clean(value).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim();
 const unique = (items) => [...new Set(items.map(clean).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-const introVideo = document.querySelector("#introVideo");
-const videoControl = document.querySelector("#videoControl");
-const soundControl = document.querySelector("#soundControl");
-
-function updateVideoButton() {
-  if (!introVideo || !videoControl || !soundControl) return;
-  videoControl.textContent = introVideo.paused ? "Play Intro" : "Pause Intro";
-  soundControl.textContent = introVideo.muted ? "Sound On" : "Sound Off";
-}
-
-if (introVideo && videoControl && soundControl) {
-  videoControl.addEventListener("click", async () => {
-    if (introVideo.paused) await introVideo.play().catch(() => {});
-    else introVideo.pause();
-    updateVideoButton();
-  });
-
-  soundControl.addEventListener("click", async () => {
-    introVideo.muted = !introVideo.muted;
-    if (!introVideo.muted && introVideo.paused) await introVideo.play().catch(() => {});
-    updateVideoButton();
-  });
-
-  introVideo.addEventListener("play", updateVideoButton);
-  introVideo.addEventListener("pause", updateVideoButton);
-  introVideo.addEventListener("volumechange", updateVideoButton);
-  updateVideoButton();
-}
-
 function escapeHtml(value) {
   return clean(value)
     .replaceAll("&", "&amp;")
@@ -205,25 +176,6 @@ function displayName(row) {
   return parts.join(" ") || "Name not specified";
 }
 
-function contactData(row) {
-  const contactNames = [
-    ["Mobile", ["Mobile", "Mobile Number", "Phone", "Phone Number", "Telephone", "Contact Number", "WhatsApp", "Whatsapp"]],
-    ["Email", ["Email", "Email Address", "Mail"]],
-    ["Father Mobile", ["Father Mobile", "Father Phone", "Father Number"]],
-    ["Mother Mobile", ["Mother Mobile", "Mother Phone", "Mother Number"]],
-    ["Address", ["Address", "Location"]],
-  ];
-
-  const pairs = contactNames
-    .map(([label, names]) => [label, get(row, names)])
-    .filter(([, value]) => clean(value));
-
-  const extraContact = getAnyStartingWith(row, ["contact"]);
-  if (extraContact && !pairs.some(([, value]) => value === extraContact)) pairs.push(["Contact", extraContact]);
-
-  return pairs;
-}
-
 function normalizeBirthday(row, sheet, index) {
   const dobRaw = get(row, ["DOB", "Date of Birth", "Birth Date", "Birthday", "Date Birth"]);
   const parsed = parseDob(dobRaw);
@@ -231,7 +183,6 @@ function normalizeBirthday(row, sheet, index) {
 
   const birthdayDate = birthdayDateForCurrentYear(parsed.month, parsed.day);
   const name = displayName(row);
-  const contacts = contactData(row);
 
   return {
     id: `${sheet.gid}-${index + 1}`,
@@ -240,8 +191,7 @@ function normalizeBirthday(row, sheet, index) {
     dobRaw,
     birthdayDate,
     dateKey: makeDateKey(birthdayDate),
-    contacts,
-    searchText: key([name, sheet.name, dobRaw, ...contacts.flat()].join(" ")),
+    searchText: key([name, sheet.name, dobRaw].join(" ")),
   };
 }
 
@@ -329,7 +279,7 @@ function renderDetails() {
   const selected = state.selectedDateKey;
   if (!selected) {
     $("detailsTitle").textContent = "Select a day";
-    $("detailsNote").textContent = "Click a date on the calendar to show the date, name, position, and contacting data if available.";
+    $("detailsNote").textContent = "Click a date on the calendar to show the date, name, and position.";
     $("birthdayDetails").innerHTML = `<div class="empty-state">No day selected yet.</div>`;
     return;
   }
@@ -351,7 +301,6 @@ function renderDetails() {
         <div class="meta-row"><strong>Date</strong><span>${escapeHtml(formatDate(person.birthdayDate))}</span></div>
         <div class="meta-row"><strong>Position</strong><span>${escapeHtml(person.position)}</span></div>
         <div class="meta-row"><strong>Original DOB</strong><span>${escapeHtml(person.dobRaw)}</span></div>
-        ${person.contacts.length ? person.contacts.map(([label, value]) => `<div class="meta-row"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join("") : `<div class="meta-row"><strong>Contact</strong><span>No contacting data available.</span></div>`}
       </div>
     </article>
   `).join("");

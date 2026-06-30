@@ -21,19 +21,10 @@
         <a href="public-logs-dashboard.html">Dashboard</a>
         <a href="curriculum.html">Curriculum</a>
       </nav>
-      <div class="media-controls" aria-label="Intro video controls">
-        <button class="video-control" id="videoControl" type="button">Pause Intro</button>
-        <button class="video-control sound-control" id="soundControl" type="button">Sound On</button>
-      </div>
     </header>
 
     <main class="shell" id="top">
       <section class="hero-card" aria-labelledby="page-title">
-        <video class="hero-video" id="introVideo" autoplay muted loop playsinline poster="flame-logo.png">
-          <source src="intro.mp4" type="video/mp4" />
-        </video>
-        <div class="hero-overlay" aria-hidden="true"></div>
-
         <div class="hero-brand" aria-hidden="true">
           <img src="flame-logo.png" alt="" />
         </div>
@@ -68,8 +59,8 @@
           <button id="todayButton" type="button">Current Month</button>
           <button id="nextMonth" type="button">Next Month</button>
           <label>
-            Search name / contact / position
-            <input id="birthdaySearch" type="search" placeholder="Name, phone, email, sheet..." autocomplete="off" />
+            Search name / position
+            <input id="birthdaySearch" type="search" placeholder="Name or sheet..." autocomplete="off" />
           </label>
         </div>
       </section>
@@ -113,7 +104,7 @@
           <div class="section-heading compact">
             <p class="eyebrow">Selected Day</p>
             <h2 id="detailsTitle">Select a day</h2>
-            <p class="section-note" id="detailsNote">Click a date on the calendar to show the date, name, position, and contacting data if available.</p>
+            <p class="section-note" id="detailsNote">Click a date on the calendar to show the date, name, and position.</p>
           </div>
           <div id="birthdayDetails" class="birthday-details"></div>
         </aside>

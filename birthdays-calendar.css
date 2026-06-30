@@ -66,8 +66,7 @@ body::before {
 }
 
 .brand-mark,
-.top-links,
-.media-controls { pointer-events: auto; }
+.top-links { pointer-events: auto; }
 
 .brand-mark {
   display: grid;
@@ -84,8 +83,7 @@ body::before {
 
 .brand-mark img { width: 100%; height: 100%; object-fit: contain; }
 
-.top-links,
-.media-controls {
+.top-links {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -93,7 +91,6 @@ body::before {
 }
 
 .top-links a,
-.video-control,
 button,
 .button-link {
   min-height: 42px;
@@ -127,7 +124,6 @@ button,
 button:hover,
 .button-link:hover,
 .top-links a:hover,
-.video-control:hover,
 input:hover {
   border-color: var(--sky);
   box-shadow: 0 10px 26px rgba(52, 169, 214, 0.16);
@@ -160,6 +156,10 @@ input:hover {
   min-height: 410px;
   padding: 22px;
   overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,249,242,0.84)),
+    radial-gradient(circle at 82% 22%, rgba(240, 74, 24, 0.12), transparent 24rem),
+    radial-gradient(circle at 10% 78%, rgba(52, 169, 214, 0.12), transparent 22rem);
 }
 
 .hero-card::after {
@@ -170,27 +170,6 @@ input:hover {
   background: linear-gradient(90deg, var(--flame), var(--sky), var(--leaf), var(--gold));
 }
 
-.hero-video,
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-}
-
-.hero-video {
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.36;
-  filter: saturate(1.14) contrast(1.02);
-}
-
-.hero-overlay {
-  z-index: -1;
-  background:
-    linear-gradient(90deg, rgba(255, 253, 248, 0.95) 0%, rgba(255, 253, 248, 0.82) 52%, rgba(255, 253, 248, 0.62) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(248, 242, 234, 0.42));
-}
 
 .hero-brand {
   display: grid;
@@ -473,7 +452,6 @@ input {
 
 @media (max-width: 1080px) {
   .site-header { grid-template-columns: auto 1fr; }
-  .media-controls { grid-column: 1 / -1; }
   .hero-card, .filters-card, .calendar-layout { grid-template-columns: 1fr; }
   .controls-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .controls-grid label { grid-column: 1 / -1; }
@@ -481,7 +459,7 @@ input {
 
 @media (max-width: 720px) {
   .shell { width: min(100% - 18px, 1240px); padding-top: 176px; }
-  .top-links, .media-controls { justify-content: flex-start; }
+  .top-links { justify-content: flex-start; }
   .story-strip, .controls-grid { grid-template-columns: 1fr; }
   .calendar-day { min-height: 96px; padding: 8px; }
   .weekday-grid, .calendar-grid { gap: 5px; }
