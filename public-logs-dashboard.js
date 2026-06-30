@@ -26,7 +26,7 @@ const MODULES = [
 const state = {
   logs: [],
   filtered: [],
-  filters: { period: "30", module: "All", school: "All", status: "All" },
+  filters: { period: "all", module: "All", school: "All", status: "All" },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -97,8 +97,53 @@ function logDateRange(items) {
   return { from: dates[0] || null, to: dates[dates.length - 1] || null };
 }
 
+function selectedPeriodRange() {
+  const today = startOfToday();
+  const period = state.filters.period;
+
+  if (period === "today") return { from: today, to: today };
+
+  if (["7", "30"].includes(period)) {
+    const from = new Date(today);
+    from.setDate(from.getDate() - Number(period) + 1);
+    return { from, to: today };
+  }
+
+  // All Time uses the available non-Activities dashboard records.
+  return logDateRange(dashboardLogs());
+}
+
+function inclusiveWeekdayCount(from, to) {
+  if (!from || !to) return 0;
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const end = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  if (end < start) return 0;
+
+  let count = 0;
+  const current = new Date(start);
+  while (current <= end) {
+    const day = current.getDay();
+    if (day !== 0 && day !== 6) count += 1;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+function expectedMorningAssemblyCount() {
+  const range = selectedPeriodRange();
+  return inclusiveWeekdayCount(range.from, range.to);
+}
+
+function expectedPrincipalsVisitCount() {
+  const range = selectedPeriodRange();
+
+  // Principals Visit expected count = 30 missions/week.
+  // The dashboard period calculation uses school working days, so 30/week = 6 missions per working day.
+  return inclusiveWeekdayCount(range.from, range.to) * 6;
+}
+
 function renderStoryRange() {
-  const range = logDateRange(state.logs.filter((log) => !isActivitiesSheetLog(log)));
+  const range = selectedPeriodRange();
   if ($("storyFrom")) $("storyFrom").textContent = formatDate(range.from);
   if ($("storyTo")) $("storyTo").textContent = formatDate(range.to);
 }
@@ -215,7 +260,7 @@ function applyFilters() {
   state.filtered = state.logs.filter((log) => {
     let inPeriod = true;
     if (period === "today") inPeriod = log.date && log.date >= today;
-    else if (["7", "30", "90"].includes(period)) {
+    else if (["7", "30"].includes(period)) {
       const start = new Date(today);
       start.setDate(start.getDate() - Number(period) + 1);
       inPeriod = log.date && log.date >= start;
@@ -533,7 +578,11 @@ function summaryTableHtml({ title, subtitle, rows, columns, open = false }) {
     <div class="summary-table-body table-wrap">
       <table>
         <thead><tr><th>School</th>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>Total</th></tr></thead>
-        <tbody>${rows.map((row) => `<tr><td><strong>${escapeHtml(row.school)}</strong></td>${columns.map((column) => `<td>${row.counts[column.key] || 0}</td>`).join("")}<td><strong>${row.total}</strong></td></tr>`).join("")}</tbody>
+        <tbody>${rows.map((row) => `<tr><td><strong>${escapeHtml(row.school)}</strong></td>${columns.map((column) => {
+          const value = row.counts[column.key] || 0;
+          const displayValue = typeof column.display === "function" ? column.display(value, row, column) : value;
+          return `<td>${escapeHtml(displayValue)}</td>`;
+        }).join("")}<td><strong>${row.total}</strong></td></tr>`).join("")}</tbody>
       </table>
     </div>
   </details>`;
@@ -603,9 +652,21 @@ function buildActivitiesRows() {
 }
 
 function renderMatrix() {
+  const morningExpected = expectedMorningAssemblyCount();
+  const principalsExpected = expectedPrincipalsVisitCount();
   const missionColumns = [
-    { key: "Morning Assembly", label: "Morning Assembly", words: ["morning assembly", "assembly", "morning"] },
-    { key: "Principals Visit", label: "Principals Visit", words: ["principals visit", "principal visit", "visits", "visit"] },
+    {
+      key: "Morning Assembly",
+      label: "Morning Assembly",
+      words: ["morning assembly", "assembly", "morning"],
+      display: (value) => `${value}/${morningExpected}`,
+    },
+    {
+      key: "Principals Visit",
+      label: "Principals Visit",
+      words: ["principals visit", "principal visit", "visits", "visit"],
+      display: (value) => `${value}/${principalsExpected}`,
+    },
   ];
 
   const follow = buildFollowUpRows();
@@ -615,7 +676,7 @@ function renderMatrix() {
   const summaryBlocks = [
     summaryTableHtml({
       title: "Morning Assembly & Principals Visit",
-      subtitle: "Counts per school for Morning Assembly and Principals Visit only.",
+      subtitle: "Morning Assembly and Principals Visit show actual/expected counts. Expected = 5 Morning Assembly missions/week and 30 Principals Visit missions/week according to the selected From/To dates.",
       columns: missionColumns,
       rows: buildFixedModuleRows(missionColumns),
       open: true,
