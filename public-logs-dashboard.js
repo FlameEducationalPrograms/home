@@ -1,4 +1,8 @@
+const ACTIVITIES_WORKBOOK_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTTaWrIhTwTpW3GWaeKMULfeC4Qeoh-JrLjBves7ZRvW-z2yX0tVcOB2ytIZ1JJo3lXlBO6ahvb46g/pubhtml";
+const ACTIVITIES_WORKBOOK_BASE = ACTIVITIES_WORKBOOK_URL.replace(/\/pubhtml.*$/, "");
+
 const WORKBOOK_URLS = [
+  ACTIVITIES_WORKBOOK_URL,
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0FssafaNQO506Gnup09T1Pb8qokb9s9yp62ZdFFYuxtsohYOdy409q1_q_cYl4vHZhZqe1tAUHF3Q/pubhtml",
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYYBB5ZadA4Hhyc9nuFvfAwIQG_uolpXyk3ovhWHbwJEPk5IF8ht2eXo-0as1zvjK_R_tiPaCXmhSZ/pubhtml",
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFHXifAA7qF5I0XTOV9aN3ATCuWQQFlCVrZlJomZsd8c-vWZT3xuq-f4z8-Qz8J0lcddgJsuTejKYa/pubhtml",
@@ -480,7 +484,9 @@ function moduleMatches(log, words) {
 }
 
 function followUpLabel(item) {
-  return clean(item.followUpTask) || clean(item.title) || "Follow-Up";
+  // Public Summary Follow-Up columns must come ONLY from the actual "Follow-Up" sheet column.
+  // Do not fall back to title/question text here, because unrelated questions can appear as wrong columns.
+  return clean(item.followUpTask);
 }
 
 function countUniqueMissions(items) {
@@ -529,20 +535,37 @@ function buildFixedModuleRows(columns) {
 }
 
 function buildFollowUpRows() {
-  const followLogs = state.filtered.filter((log) => moduleMatches(log, ["follow up", "followup", "follow-up", "follow"]));
-  const labels = unique(followLogs.map(followUpLabel)).slice(0, 3);
-  const columns = labels.length
-    ? labels.map((label) => ({ key: label, label }))
-    : [{ key: "Follow-Up", label: "Follow-Up" }];
+  const followLogs = state.filtered.filter((log) =>
+    moduleMatches(log, ["follow up", "followup", "follow-up", "follow"]) && followUpLabel(log)
+  );
+  const labels = unique(followLogs.map(followUpLabel));
+  const columns = labels.map((label) => ({ key: label, label }));
   const schools = unique(followLogs.map((log) => log.school));
   const rows = schools.map((school) => {
     const schoolLogs = followLogs.filter((log) => log.school === school);
     const counts = Object.fromEntries(columns.map((column) => [
       column.key,
-      countUniqueMissions(schoolLogs.filter((log) => followUpLabel(log) === column.key || (!labels.length && moduleMatches(log, ["follow"]))))
+      countUniqueMissions(schoolLogs.filter((log) => followUpLabel(log) === column.key))
     ]));
     const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
     return { school, counts, total };
+  }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
+  return { columns, rows };
+}
+
+function isActivitiesSheetLog(log) {
+  const sameWorkbook = key(log.sourceKey || "") === key(ACTIVITIES_WORKBOOK_BASE);
+  return sameWorkbook && moduleMatches(log, ["activities", "activity"]);
+}
+
+function buildActivitiesRows() {
+  const columns = [{ key: "Activities", label: "Activities" }];
+  const activityLogs = state.filtered.filter(isActivitiesSheetLog);
+  const schools = unique(activityLogs.map((log) => log.school));
+  const rows = schools.map((school) => {
+    const schoolLogs = activityLogs.filter((log) => log.school === school);
+    const counts = { Activities: countUniqueMissions(schoolLogs) };
+    return { school, counts, total: counts.Activities };
   }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
   return { columns, rows };
 }
@@ -554,6 +577,7 @@ function renderMatrix() {
   ];
 
   const follow = buildFollowUpRows();
+  const activities = buildActivitiesRows();
 
   const summaryBlocks = [
     summaryTableHtml({
@@ -565,7 +589,7 @@ function renderMatrix() {
     }),
     summaryTableHtml({
       title: "Follow-Up Missions",
-      subtitle: "Counts per school for the three Follow-Up types found in the Follow-Up column.",
+      subtitle: "Counts per school using only the actual values found in the Follow-Up column.",
       columns: follow.columns,
       rows: follow.rows,
     }),
@@ -583,9 +607,9 @@ function renderMatrix() {
     }),
     summaryTableHtml({
       title: "Activities Missions",
-      subtitle: "Activities counts per school.",
-      columns: [{ key: "Activities", label: "Activities", words: ["activities", "activity", "event", "events"] }],
-      rows: buildFixedModuleRows([{ key: "Activities", label: "Activities", words: ["activities", "activity", "event", "events"] }]),
+      subtitle: "Activities counts per school from the Activities sheet only.",
+      columns: activities.columns,
+      rows: activities.rows,
     }),
   ];
 
