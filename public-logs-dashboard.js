@@ -78,16 +78,39 @@ function rowsFromCsv(csv) {
 function parseDate(value) {
   const raw = clean(value);
   if (!raw) return null;
-  const direct = new Date(raw);
-  if (!Number.isNaN(direct.getTime())) return direct;
-  const match = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-  if (!match) return null;
-  const [, dd, mm, yyyy] = match;
-  const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-  const date = new Date(Number(year), Number(mm) - 1, Number(dd));
-  return Number.isNaN(date.getTime()) ? null : date;
-}
 
+  // Google Sheets serial number date, if exported as a number
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    const serial = Number(raw);
+    if (serial > 25000 && serial < 80000) {
+      const utcDays = Math.floor(serial - 25569);
+      const utcValue = utcDays * 86400 * 1000;
+      return new Date(utcValue);
+    }
+  }
+
+  // Egyptian / European format: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY
+  // Important: this must come before new Date(raw)
+  const dmy = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (dmy) {
+    const [, dd, mm, yyyy] = dmy;
+    const year = yyyy.length === 2 ? Number(`20${yyyy}`) : Number(yyyy);
+    const date = new Date(year, Number(mm) - 1, Number(dd));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // ISO format: YYYY-MM-DD
+  const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    const [, yyyy, mm, dd] = iso;
+    const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // Final fallback
+  const direct = new Date(raw);
+  return Number.isNaN(direct.getTime()) ? null : direct;
+}
 function formatDate(date) {
   return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "No date";
 }
