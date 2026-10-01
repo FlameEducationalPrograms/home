@@ -160,9 +160,8 @@ function expectedMorningAssemblyCount() {
 function expectedPrincipalsVisitCount() {
   const range = selectedPeriodRange();
 
-  // Principals Visit expected count = 30 missions/week.
-  // The dashboard period calculation uses school working days, so 30/week = 6 missions per working day.
-  return inclusiveWeekdayCount(range.from, range.to) * 6;
+  // Principals Visit expected count = 5 visits per school working day.
+  return inclusiveWeekdayCount(range.from, range.to) * 5;
 }
 
 function renderStoryRange() {
@@ -579,6 +578,12 @@ function countUniqueMissions(items) {
   return uniqueVisitCount(items);
 }
 
+function countDailyEvents(items) {
+  // Morning Assembly is one daily event per school, regardless of how many
+  // individual sub-task records or people are recorded for that day.
+  return new Set(items.map((item) => visitDateKey(item.date))).size;
+}
+
 function summaryTableHtml({ title, subtitle, rows, columns, open = false, totalDisplay = null, showPercentage = false, expectedTotal = 0 }) {
   const total = rows.reduce((sum, row) => sum + row.total, 0);
   if (!rows.length || !columns.length) {
@@ -620,10 +625,11 @@ function buildFixedModuleRows(columns) {
   const schools = unique(source.map((log) => log.school));
   return schools.map((school) => {
     const schoolLogs = source.filter((log) => log.school === school);
-    const counts = Object.fromEntries(columns.map((column) => [
-      column.key,
-      countUniqueMissions(schoolLogs.filter((log) => moduleMatches(log, column.words)))
-    ]));
+    const counts = Object.fromEntries(columns.map((column) => {
+      const matchingLogs = schoolLogs.filter((log) => moduleMatches(log, column.words));
+      const counter = typeof column.count === "function" ? column.count : countUniqueMissions;
+      return [column.key, counter(matchingLogs)];
+    }));
     const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
     return { school, counts, total };
   }).filter((row) => row.total > 0).sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
@@ -687,6 +693,7 @@ function renderMatrix() {
       key: "Morning Assembly",
       label: "Morning Assembly",
       words: ["morning assembly", "assembly", "morning"],
+      count: countDailyEvents,
       display: (value) => `${value}/${morningExpected}`,
     },
     {
@@ -704,7 +711,7 @@ function renderMatrix() {
   const summaryBlocks = [
     summaryTableHtml({
       title: "Morning Assembly & Principals Visit",
-      subtitle: "Morning Assembly, Principals Visit, and Total show actual/expected counts. Expected = 5 Morning Assembly missions/week + 30 Principals Visit missions/week according to the selected From/To dates.",
+      subtitle: "Morning Assembly, Principals Visit, and Total show actual/expected counts. Expected = 1 Morning Assembly event + 5 Principals Visits per working day according to the selected From/To dates. Morning Assembly is counted once per school per day regardless of its individual sub-tasks.",
       columns: missionColumns,
       rows: buildFixedModuleRows(missionColumns),
       open: true,
